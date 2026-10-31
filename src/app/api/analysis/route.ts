@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { fetchStockNews } from "@/lib/news";
 import { analyzeMarket, RESEARCH_VERSION } from "@/lib/analyze-market";
 import { COUNTRY_CURRENCY, getMarketData } from "@/lib/market-data";
 import { ensureSeeded, getTicker, saveAnalysis } from "@/lib/universe";
@@ -22,12 +23,10 @@ export async function GET(req: Request) {
   await ensureSeeded();
   const info = await getTicker(symbol);
   const target = info?.symbol ?? symbol;
-  const md = await getMarketData(
-    target,
-    range,
-    interval,
-    info?.countryCode ? COUNTRY_CURRENCY[info.countryCode] ?? null : null,
-  );
+  const [md, news] = await Promise.all([
+    getMarketData(target, range, interval, info?.countryCode ? COUNTRY_CURRENCY[info.countryCode] ?? null : null),
+    fetchStockNews({symbol:target,name:info?.name,countryCode:info?.countryCode}).catch(() => null),
+  ]);
 
   if (!md.candles && !md.scanner) {
     return NextResponse.json(
@@ -52,7 +51,7 @@ export async function GET(req: Request) {
     sector: info?.sector ?? undefined,
   };
 
-  const analysis = analyzeMarket(md, meta);
+  const analysis = analyzeMarket(md, meta, news);
 
   if (!analysis) {
     return NextResponse.json({ error: `Sem dados suficientes para analisar "${symbol}".`, symbol }, { status: 404 });
@@ -83,6 +82,7 @@ export async function GET(req: Request) {
       hasHistory: analysis.hasHistory,
       historySource: analysis.historySource,
       confluence: analysis.confluence,
+      decision: analysis.decision,
       version: RESEARCH_VERSION,
       range,
       interval,

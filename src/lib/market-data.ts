@@ -8,6 +8,8 @@ export type DataSource = "yahoo" | "nasdaq" | "tradingview" | "nenhuma";
 export type MarketData = {
   symbol: string;
   candles: Candle[] | null;
+  validationCandles?: Candle[] | null;
+  quoteAsOf?: number | null;
   bundle: ChartBundle | null;
   scanner: (TvSnapshot & { __tv: string }) | null;
   meta: QuoteMeta | null;
@@ -68,7 +70,7 @@ export async function getMarketData(
   const isUs = !suffix;
 
   const [bundle, scanner] = await Promise.all([
-    fetchChart(symbol, range === "5y" ? "5y" : "5y", "1d").catch(() => null),
+    fetchChart(symbol, "5y", "1d").catch(() => null),
     fetchTradingView(symbol).catch(() => null),
   ]);
 
@@ -77,7 +79,7 @@ export async function getMarketData(
 
   if (!candles || candles.length < 40) {
     if (isUs) {
-      const nasdaq = await fetchNasdaqHistory(base, RANGE_YEARS[range] ?? 3);
+      const nasdaq = await fetchNasdaqHistory(base, 5.5);
       if (nasdaq && nasdaq.length > 40) {
         candles = nasdaq;
         historySource = "nasdaq";
@@ -86,6 +88,8 @@ export async function getMarketData(
     }
     // Nunca retirar o sufixo de uma ação estrangeira para procurar um homónimo americano.
   }
+
+  const validationCandles = candles;
 
   if (candles) {
     candles = sliceByRange(candles, range);
@@ -157,6 +161,8 @@ export async function getMarketData(
   return {
     symbol,
     candles,
+    validationCandles,
+    quoteAsOf: bundle?.meta.regularMarketTime ? bundle.meta.regularMarketTime * 1000 : null,
     bundle: effectiveBundle,
     scanner,
     meta,

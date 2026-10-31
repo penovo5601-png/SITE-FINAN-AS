@@ -51,7 +51,7 @@ export default async function Home() {
           <p className="mt-5 max-w-2xl text-[15px] leading-relaxed text-ink-300">
             Motor de avaliação técnica que cruza RSI, MACD, ADX, Bandas de Bollinger, Estocástico, MFI, OBV, CCI,
             Williams %R, médias móveis, estrutura de máximos/mínimos e níveis de suporte/resistência para produzir uma
-            pontuação de −100 a +100, uma probabilidade de subida e um plano com alvos e stop.
+            pontuação de −100 a +100, cenários condicionais, verificação histórica e um plano com alvos e stop.
           </p>
 
           <div className="mt-8 max-w-2xl">

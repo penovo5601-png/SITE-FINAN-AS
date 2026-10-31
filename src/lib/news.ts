@@ -1,4 +1,5 @@
 import { XMLParser } from "fast-xml-parser";
+import { filterRecentNews, MAX_NEWS_HOURS, HOUR_MS } from "./news-policy";
 
 export type NewsArticle = {
   id: string;
@@ -18,6 +19,10 @@ export type StockNewsFeed = {
   stale: boolean;
   searchUrl: string;
   message: string;
+  windowHours: number;
+  windowStart: string;
+  asOf: string;
+  excludedByAge: number;
 };
 export type NewsIdentity = { symbol: string; name?: string | null; countryCode?: string | null };
 const TTL = 10 * 60 * 1000;
@@ -57,7 +62,7 @@ export function parseNewsRss(xml: string, via: NewsArticle["via"], language: str
     return items.flatMap((item): NewsArticle[] => {
       const title = text(item.title), url = safeUrl(item.link);
       const at = Date.parse(text(item.pubDate));
-      if (!title || !url || !Number.isFinite(at) || at > now + 86_400_000 || at < now - 90 * 86_400_000) return [];
+      if (!title || !url || !Number.isFinite(at) || at > now || at < now - MAX_NEWS_HOURS * HOUR_MS) return [];
       let source = text(item.source);
       if (!source) source = new URL(url).hostname.replace(/^www\./, "");
       const cleanTitle = title.endsWith(` - ${source}`) ? title.slice(0, -(source.length + 3)) : title;
@@ -77,14 +82,14 @@ export function deduplicateNews(articles: NewsArticle[]): NewsArticle[] {
 export async function fetchStockNews(identity: NewsIdentity, refresh = false): Promise<StockNewsFeed> {
   const symbol = identity.symbol.toUpperCase();
   const hit = cache.get(symbol);
-  if (!refresh && hit && Date.now() - hit.at < TTL) return hit.data;
+  if (!refresh && hit && Date.now() - hit.at < TTL) return applyNewsWindow(hit.data);
   const pending = inflight.get(symbol);
-  if (pending) return pending;
+  if (pending) return applyNewsWindow(await pending);
   const task = (async (): Promise<StockNewsFeed> => {
     const company = aliases[symbol] || (identity.name || symbol).replace(/\s+(Inc\.?|Corporation|Corp\.?|PLC|Class [AB]|Common Stock|ADR)\b.*$/i, "").trim();
     const portuguese = identity.countryCode === "PT" || identity.countryCode === "BR" || /\.(LS|SA)$/.test(symbol);
     const locale = identity.countryCode === "BR" || symbol.endsWith(".SA") ? ["pt-BR", "BR", "BR:pt-419"] : portuguese ? ["pt-PT", "PT", "PT:pt-150"] : ["en-US", "US", "US:en"];
-    const query = `"${company.replace(/["\\]/g, "")}" ${portuguese ? "(ações OR bolsa OR resultados OR lucros OR investimento)" : '("stock price" OR shares OR earnings OR revenue OR profit OR dividend OR investors)'} when:30d`;
+    const query = `"${company.replace(/["\\]/g, "")}" ${portuguese ? "(ações OR bolsa OR resultados OR lucros OR investimento)" : '("stock price" OR shares OR earnings OR revenue OR profit OR dividend OR investors)'} when:3d`;
     const params = new URLSearchParams({ q: query, hl: locale[0], gl: locale[1], ceid: locale[2] });
     const searchUrl = `https://news.google.com/search?${params}`;
     const feeds = [
@@ -108,13 +113,14 @@ export async function fetchStockNews(identity: NewsIdentity, refresh = false): P
     const firstWord = normalize(company).split(" ")[0];
     if (firstWord?.length >= 4 && !["banco", "bank", "first", "global", "grupo", "group", "china", "united", "international", "american"].includes(firstWord)) terms.push(firstWord);
     const relevant = results.flat().filter(a => terms.some(t => (` ${normalize(a.title)} `).includes(` ${t} `)));
-    const articles = deduplicateNews(relevant).slice(0, 16);
-    if (!successes && hit) return { ...hit.data, stale: true, message: "Fontes temporariamente indisponíveis. A mostrar a última consulta, com as datas originais." };
+    const articles = filterRecentNews(deduplicateNews(relevant)).slice(0, 16);
+    if (!successes && hit) return applyNewsWindow({ ...hit.data, stale: true, message: "Fontes indisponíveis. Cache novamente filtrada: só notícias ainda dentro das últimas 72 horas." });
     const data: StockNewsFeed = {
       symbol, company, articles, status: articles.length ? "ok" : successes ? "empty" : "unavailable",
       fetchedAt: new Date().toISOString(), stale: false, searchUrl,
+      windowHours: MAX_NEWS_HOURS, windowStart: new Date(Date.now() - MAX_NEWS_HOURS * HOUR_MS).toISOString(), asOf: new Date().toISOString(), excludedByAge: 0,
       message: articles.length ? "Manchetes associadas à empresa; abre a fonte para confirmar o contexto. Podem existir notícias sobre empresas homónimas."
-        : successes ? "Não foram encontradas notícias recentes para esta empresa. Não substituímos por notícias de outras ações."
+        : successes ? "Não foram encontradas notícias desta empresa nas últimas 72 horas. Não substituímos por notícias de outras ações."
         : "As fontes de notícias estão temporariamente indisponíveis. Podes tentar novamente ou abrir a pesquisa externa.",
     };
     if (successes) {
@@ -124,5 +130,17 @@ export async function fetchStockNews(identity: NewsIdentity, refresh = false): P
     return data;
   })();
   inflight.set(symbol, task);
-  try { return await task; } finally { inflight.delete(symbol); }
+  try { return applyNewsWindow(await task); } finally { inflight.delete(symbol); }
+}
+
+/** Refiltra SEMPRE no instante de servir, incluindo cache de emergência. */
+export function applyNewsWindow(feed: StockNewsFeed, hours = MAX_NEWS_HOURS, now = Date.now()): StockNewsFeed {
+  const windowHours = Number.isFinite(hours) ? Math.min(MAX_NEWS_HOURS, Math.max(1, hours)) : MAX_NEWS_HOURS;
+  const articles = filterRecentNews(feed.articles, windowHours, now);
+  const expired = feed.articles.length - articles.length;
+  return { ...feed, articles, windowHours, windowStart: new Date(now - windowHours * HOUR_MS).toISOString(), asOf: new Date(now).toISOString(),
+    excludedByAge: expired + (feed.excludedByAge ?? 0),
+    status: feed.status === "unavailable" ? "unavailable" : articles.length ? "ok" : "empty",
+    message: articles.length ? feed.message : feed.status === "unavailable" ? feed.message : `Sem notícias verificáveis desta empresa nas últimas ${windowHours} horas. Notícias anteriores não são reutilizadas para preencher o painel.`,
+  };
 }

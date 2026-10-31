@@ -38,12 +38,12 @@ export function rsi(values: number[], period = 14): Series {
   }
   gain /= period;
   loss /= period;
-  out[period] = loss === 0 ? 100 : 100 - 100 / (1 + gain / loss);
+  out[period] = gain === 0 && loss === 0 ? 50 : loss === 0 ? 100 : 100 - 100 / (1 + gain / loss);
   for (let i = period + 1; i < values.length; i++) {
     const d = values[i] - values[i - 1];
     gain = (gain * (period - 1) + Math.max(d, 0)) / period;
     loss = (loss * (period - 1) + Math.max(-d, 0)) / period;
-    out[i] = loss === 0 ? 100 : 100 - 100 / (1 + gain / loss);
+    out[i] = gain === 0 && loss === 0 ? 50 : loss === 0 ? 100 : 100 - 100 / (1 + gain / loss);
   }
   return out;
 }
@@ -231,7 +231,7 @@ export function mfi(candles: Candle[], period = 14): Series {
       if (tp[j] > tp[j - 1]) pos += flow;
       else if (tp[j] < tp[j - 1]) neg += flow;
     }
-    out[i] = neg === 0 ? 100 : 100 - 100 / (1 + pos / neg);
+    out[i] = pos === 0 && neg === 0 ? null : neg === 0 ? 100 : 100 - 100 / (1 + pos / neg);
   }
   return out;
 }
@@ -362,4 +362,17 @@ export function crossBelow(a: Series, b: Series, back = 0): boolean {
   const a1 = a[i]; const a0 = a[i - 1]; const b1 = b[i]; const b0 = b[i - 1];
   if (a1 == null || a0 == null || b1 == null || b0 == null) return false;
   return a0 >= b0 && a1 < b1;
+}
+
+/** Inclinação OBV em percentagem do volume médio: a origem arbitrária do OBV não inverte o sinal. */
+export function normalizedObvSlope(candles: Candle[], period = 25): number | null {
+  if (candles.length < period) return null;
+  const values = obv(candles).slice(-period);
+  const volume = candles.slice(-period).reduce((n, c) => n + c.v, 0) / period;
+  if (volume <= 0) return null;
+  const center = (period - 1) / 2;
+  const mean = values.reduce((a, b) => a + b, 0) / period;
+  let numerator = 0, denominator = 0;
+  for (let i = 0; i < period; i++) { numerator += (i - center) * (values[i] - mean); denominator += (i - center) ** 2; }
+  return denominator > 0 ? numerator / denominator / volume * 100 : null;
 }

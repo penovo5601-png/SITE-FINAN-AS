@@ -89,3 +89,29 @@ não probabilidades calibradas nem taxas de acerto. A previsão pode falhar.
 - `GET /api/analysis?symbol=AAPL` — análise com `confluence` e versão.
 - `GET /api/health` — inclui a versão implantada.
 - Testes: `node --import tsx --test scripts/research.test.ts`.
+
+
+## Protocolo v3 — notícias ≤72h, cenários e diagnóstico histórico
+
+A política agora usa a publicação original e filtra notícias com mais de 72 horas,
+inclusive cache válida, cache de emergência e a página aberta. O utilizador pode
+selecionar 24/48/72h. Datas futuras/inválidas são rejeitadas. Atualidade não comprova
+impacto e manchetes não recebem votos automáticos na direção do preço.
+
+A página da ação contém cenários altista, baixista e lateral com confirmação,
+invalidação e pesos de hipótese (não probabilidades). A direção requer pelo menos
+duas famílias alinhadas e score absoluto ≥12. Sem critérios, o veredicto é aguardar;
+sem evidência histórica suficiente, o sinal fica explicitamente provisório.
+
+Há um walk-forward de regras fixas: 320 barras de informação anterior, execução
+na abertura seguinte, horizonte 20 sessões, janelas de resultados sem sobreposição,
+custo assumido 20 bps, referência comparável, Wilson 95%, amostra, métricas por
+sentido e retorno líquido. Não usa notícias atuais ou scanner atual no passado.
+Os limites do teste são visíveis: não certifica uma taxa de acerto nem rentabilidade.
+
+O zoom do gráfico não muda a janela do modelo. É possível descarregar o registo
+com dados usados, hashes, versão, notícias admissíveis e operações do diagnóstico.
+
+**Regras completas:** [docs/DECISION-METHODOLOGY.md](docs/DECISION-METHODOLOGY.md).
+
+**Testes:** `node --import tsx --test scripts/research.test.ts scripts/rigor.test.ts`.

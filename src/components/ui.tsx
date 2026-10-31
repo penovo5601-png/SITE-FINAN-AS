@@ -62,7 +62,7 @@ export function ScoreDial({ score, confidence, verdict, size = 168 }: { score: n
           {score.toFixed(1)}
         </div>
         <div className="mt-1.5 text-[10.5px] font-medium uppercase tracking-wider text-ink-400">
-          confiança {confidence}%
+          convergência {confidence}/100
         </div>
       </div>
     </div>

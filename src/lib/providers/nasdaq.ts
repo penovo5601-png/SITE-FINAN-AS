@@ -3,6 +3,8 @@ import type { Candle } from "../yahoo";
 const UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
+const historyCache = new Map<string, { at: number; candles: Candle[] }>();
+
 type Row = { date: string; close: string; volume: string; open: string; high: string; low: string };
 
 function cleanNum(s: string | null | undefined): number {
@@ -15,6 +17,9 @@ function cleanNum(s: string | null | undefined): number {
  * Cobre símbolos cotados nos EUA, incluindo ADRs.
  */
 export async function fetchNasdaqHistory(symbol: string, years = 3): Promise<Candle[] | null> {
+  const cacheKey = `${symbol}:${years}`;
+  const cached = historyCache.get(cacheKey);
+  if (cached && Date.now() - cached.at < 5 * 60_000) return cached.candles;
   const to = new Date();
   const from = new Date(to.getTime() - years * 365 * 24 * 3600 * 1000);
   const iso = (d: Date) => d.toISOString().slice(0, 10);
@@ -53,7 +58,12 @@ export async function fetchNasdaqHistory(symbol: string, years = 3): Promise<Can
         })
         .filter((x): x is Candle => x !== null)
         .sort((a, b) => a.t - b.t);
-      return candles.length > 20 ? candles : null;
+      if (candles.length > 20) {
+        if (historyCache.size >= 80) historyCache.delete(historyCache.keys().next().value!);
+        historyCache.set(cacheKey, {at:Date.now(), candles});
+        return candles;
+      }
+      return null;
     } catch {
       if (attempt === 0) await new Promise((r) => setTimeout(r, 700));
     }

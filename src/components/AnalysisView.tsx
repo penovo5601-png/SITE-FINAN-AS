@@ -7,6 +7,7 @@ import type { StockAnalysis } from "@/lib/engine";
 import CandleChart from "./CandleChart";
 import ConfluencePanel from "./ConfluencePanel";
 import StockNews from "./StockNews";
+import DecisionPanel from "./DecisionPanel";
 import { Meter, ScoreDial, SectionTitle, Stat, VerdictBadge, type Verdict } from "./ui";
 
 const RANGES = [
@@ -170,21 +171,12 @@ export default function AnalysisView() {
         <div className="panel flex flex-col items-center justify-center gap-4 p-6">
           <ScoreDial score={a.score} confidence={a.confidence} verdict={a.verdict as Verdict} />
           <div className="w-full">
-            <div className="mb-1.5 flex justify-between text-[11px] uppercase tracking-wider text-ink-500">
-              <span>viés de subida · estimativa</span>
-              <span className="tnum font-bold text-ink-200">{a.probabilityUp}%</span>
+            <div className="rounded-xl border border-ink-700 bg-ink-950/60 px-3 py-3 text-center">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-ink-500">Estado da evidência</p>
+              <p className="mt-2 text-xs font-bold leading-relaxed text-amber-signal">{a.decision?.gradeLabel ?? "Sinal técnico não validado"}</p>
+              <p className="mt-2 text-[10.5px] leading-relaxed text-ink-400">Convergência não é probabilidade de acerto. Não é apresentada uma probabilidade futura sem calibração.</p>
+              <p className="mt-2 text-[11px] text-ink-300">Horizonte: {a.horizon}</p>
             </div>
-            <div className="relative h-2.5 overflow-hidden rounded-full bg-ink-800">
-              <div
-                className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-bear-500 via-amber-signal to-bull-500 transition-all duration-700"
-                style={{ width: `${a.probabilityUp}%` }}
-              />
-              <div className="absolute inset-y-0 w-0.5 bg-ink-100/70" style={{ left: "50%" }} />
-            </div>
-            <p className="mt-3 text-center text-[11px] text-ink-500">
-              Estimativa heurística, não probabilidade calibrada. Confiança indica convergência dos sinais.
-              <br />Horizonte de referência: <span className="font-semibold text-ink-300">{a.horizon}</span>
-            </p>
           </div>
         </div>
 
@@ -217,8 +209,9 @@ export default function AnalysisView() {
         </div>
       </div>
 
-      <ConfluencePanel report={a.confluence} />
       <StockNews key={symbol} symbol={symbol} />
+      <DecisionPanel audit={a.decision} currency={a.currency} />
+      <ConfluencePanel report={a.confluence} />
 
       {/* ---------------- GRÁFICO ---------------- */}
         <div className="panel p-5">
@@ -326,9 +319,13 @@ export default function AnalysisView() {
       {/* ---------------- PLANO ---------------- */}
       <div className="grid gap-5 lg:grid-cols-[1fr_1fr]">
         <div className="panel p-6">
-          <SectionTitle>Plano de operação sugerido</SectionTitle>
+          <SectionTitle>Plano condicional · não confirmado</SectionTitle>
+          {a.verdict === "NEUTRO" ? (
+            <p className="rounded-xl border border-amber-signal/30 bg-amber-signal/5 p-4 text-xs leading-relaxed text-ink-300">Sem plano operacional enquanto os critérios do veredicto não forem cumpridos. Os cenários acima mostram apenas gatilhos futuros a confirmar.</p>
+          ) : <>
+          <p className="mb-3 text-[11px] leading-relaxed text-ink-400">Entrada apenas após as confirmações do cenário. Estes níveis não significam que a rutura já aconteceu nem executam uma ordem.</p>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Stat label="Entrada" value={fmt(a.plan.entry)} sub={a.currency} />
+            <Stat label="Gatilho de entrada" value={fmt(a.plan.entry)} sub={a.currency} />
             <Stat label="Alvo 1" value={fmt(a.plan.target1)} tone={a.verdict === "DESCER" ? "bear" : "bull"} sub={pctf(((a.plan.target1 - a.plan.entry) / a.plan.entry) * 100)} />
             <Stat label="Alvo 2" value={fmt(a.plan.target2)} tone={a.verdict === "DESCER" ? "bear" : "bull"} sub={pctf(a.plan.upsidePct)} />
             <Stat label="Stop" value={fmt(a.plan.stop)} tone={a.verdict === "DESCER" ? "bull" : "bear"} sub={pctf(a.plan.downsidePct)} />
@@ -346,6 +343,7 @@ export default function AnalysisView() {
               <div className="tnum mt-1 text-[11px] text-ink-400">{fmt(a.fromHigh, 1)}% do máx. · +{fmt(a.fromLow, 1)}% do mín.</div>
             </div>
           </div>
+          </>}
           {a.levels.length > 0 && (
             <>
               <SectionTitle right={null}>

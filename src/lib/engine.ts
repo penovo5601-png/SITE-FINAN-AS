@@ -1,5 +1,6 @@
 import type { Candle, ChartBundle } from "./yahoo";
 import type { ConfluenceReport } from "./confluence";
+import type { DecisionAudit } from "./decision-audit";
 import {
   adx,
   annualizedVolatility,
@@ -16,6 +17,7 @@ import {
   maxDrawdown,
   mfi,
   obv,
+  normalizedObvSlope,
   roc,
   rsi,
   sma,
@@ -150,6 +152,7 @@ export type Fundamentals = {
 };
 
 export type StockAnalysis = {
+  decision?: DecisionAudit;
   confluence?: ConfluenceReport;
   hasHistory: boolean;
   historySource: string;
@@ -388,7 +391,7 @@ export function analyzeStock(
     roc60: last(rc60),
     avgVolume20: avgVol20,
     volumeRatio: avgVol20 ? lastVol / avgVol20 : null,
-    obvSlope: linregSlope(obvSeries.slice(-25), Math.min(25, obvSeries.length)),
+    obvSlope: normalizedObvSlope(candles, 25),
     slope20: linregSlope(closes, Math.min(20, n)),
     slope60: linregSlope(closes, Math.min(60, n)),
     trendR2: linregR2(closes, Math.min(60, n)),
@@ -569,10 +572,10 @@ export function analyzeStock(
       group: "Volume",
       name: "On-Balance Volume (inclinação 25s)",
       value: ind.obvSlope > 0 ? "acumulação" : "distribuição",
-      bias: clamp(ind.obvSlope * 0.0000002),
+      bias: clamp(ind.obvSlope * 1.5),
       weight: 0.6,
       detail: ind.obvSlope > 0
-        ? "OBV a subir: o dinheiro inteligente está a acumular posições."
+        ? "OBV com inclinação positiva: volume assinado compatível com acumulação; não identifica os investidores."
         : "OBV a cair: fluxo vendedor dominante nas últimas sessões.",
     });
   }
