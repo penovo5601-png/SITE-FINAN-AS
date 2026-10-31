@@ -115,3 +115,24 @@ com dados usados, hashes, versão, notícias admissíveis e operações do diagn
 **Regras completas:** [docs/DECISION-METHODOLOGY.md](docs/DECISION-METHODOLOGY.md).
 
 **Testes:** `node --import tsx --test scripts/research.test.ts scripts/rigor.test.ts`.
+
+
+## v4 — empresa, valor intrínseco e recuperação das velas
+
+A página distingue desempenho da ação de rentabilidade empresarial e mostra ROE,
+ROA/ROIC, margens, crescimento, dívida/caixa, consistência FY, retorno por período,
+CAGR e anos negativos/positivos. As moedas e períodos são explícitos.
+
+O DCF tem hipóteses editáveis, cenários, sensibilidade e regras de indisponibilidade.
+Não confunde GBP com GBp, não converte sem FX verificável, não inventa um DCF para
+FCF negativo e suspende valores por ação se o denominador divergir ou um ADR não
+for reconciliado. Graham é uma referência histórica, não preço garantido.
+
+A falha do pedido Yahoo foi corrigida. A recuperação inclui dois hosts Yahoo,
+Nasdaq para os EUA, PostgreSQL opcional via Drizzle, 42 arquivos reais de emergência,
+cópias do navegador e um gráfico independente TradingView. Dados de cache mantêm
+as datas reais; não se simulam velas para esconder falhas. Não existe garantia de
+uptime absoluto de fornecedores externos.
+
+Detalhes: [docs/COMPANY-AND-HISTORY.md](docs/COMPANY-AND-HISTORY.md).
+Testes: `node --import tsx --test scripts/research.test.ts scripts/rigor.test.ts scripts/company-history.test.ts`.

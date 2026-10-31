@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { fetchFinancialStatements } from "@/lib/providers/financials";
+import { attachCompanyResearch } from "@/lib/company-service";
 import { fetchStockNews } from "@/lib/news";
 import { analyzeMarket, RESEARCH_VERSION } from "@/lib/analyze-market";
 import { COUNTRY_CURRENCY, getMarketData } from "@/lib/market-data";
@@ -23,9 +25,10 @@ export async function GET(req: Request) {
   await ensureSeeded();
   const info = await getTicker(symbol);
   const target = info?.symbol ?? symbol;
-  const [md, news] = await Promise.all([
+  const [md, news, statements] = await Promise.all([
     getMarketData(target, range, interval, info?.countryCode ? COUNTRY_CURRENCY[info.countryCode] ?? null : null),
     fetchStockNews({symbol:target,name:info?.name,countryCode:info?.countryCode}).catch(() => null),
+    fetchFinancialStatements(target),
   ]);
 
   if (!md.candles && !md.scanner) {
@@ -57,6 +60,8 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: `Sem dados suficientes para analisar "${symbol}".`, symbol }, { status: 404 });
   }
 
+  await attachCompanyResearch(analysis,md,statements);
+
   const warnings: string[] = [...(analysis.sourceNotes ?? [])];
   if (!info) warnings.push(`"${symbol}" não consta do universo indexado; a análise usou apenas os dados dos fornecedores.`);
   if (analysis.hasHistory && analysis.bars < 120) warnings.push(`Histórico curto (${analysis.bars} sessões): os indicadores de longo prazo são menos fiáveis.`);
@@ -83,6 +88,7 @@ export async function GET(req: Request) {
       historySource: analysis.historySource,
       confluence: analysis.confluence,
       decision: analysis.decision,
+      company: analysis.company,
       version: RESEARCH_VERSION,
       range,
       interval,

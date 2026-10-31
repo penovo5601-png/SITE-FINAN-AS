@@ -1,5 +1,5 @@
 /** Regras fixas e versionadas. Não são afinadas a partir dos resultados apresentados. */
-export const RESEARCH_VERSION = "2026.11-rigorous-scenarios-v3";
+export const RESEARCH_VERSION = "2026.11-company-history-v4";
 export const TECHNICAL_LOOKBACK = 320;
 export const FORECAST_HORIZON = 20;
 export const VALIDATION_SPACING = FORECAST_HORIZON + 1;

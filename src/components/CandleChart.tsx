@@ -45,7 +45,7 @@ export default function CandleChart({ candles, sma20, sma50, sma200, bbUpper, bb
   const model = useMemo(() => {
     const n = candles.length;
     const step = plotW / Math.max(1, n);
-    const bw = Math.max(1.2, Math.min(11, step * 0.66));
+    const bw = Math.max(0.35, Math.min(11, step * 0.66));
     let hi = -Infinity;
     let lo = Infinity;
     let maxVol = 0;

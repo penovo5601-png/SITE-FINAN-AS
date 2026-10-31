@@ -35,6 +35,9 @@ export function analyzeMarket(
     if (analysis) analysis = applyConfluence(analysis, scanner, []);
   }
   if (!analysis) return null;
+  analysis.historyEvidence=md.historyEvidence;
+  analysis.chartCandles=md.candles??analysis.candles;
+  if(analysis.candles.length<2&&md.candles&&md.candles.length>=2){analysis.candles=md.candles.slice(-180);analysis.bars=analysis.candles.length;}
   analysis.updatedAt = Date.now();
   return attachDecisionAudit(analysis, { history: researchHistory, source: md.historySource === "nenhuma" ? md.source : md.historySource, scanner: md.scanner, quoteAsOf: md.quoteAsOf, news });
 }

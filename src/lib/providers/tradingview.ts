@@ -1,3 +1,5 @@
+import { canonicalSymbol } from "../history-types";
+import { FINANCIAL_COLUMNS } from "./financials";
 const UA =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
@@ -18,6 +20,7 @@ export const TV_COLUMNS = [
   "Pivot.M.Classic.S3", "Pivot.M.Classic.R3",
   "RSI|1W", "ADX|1W", "Recommend.All|1W", "RSI|1M", "Recommend.All|1M",
   "ADX+DI", "ADX-DI", "Ichimoku.BLine", "VWMA", "HullMA9", "Stoch.RSI.K", "Stoch.RSI.D", "UO", "BBPower",
+  ...FINANCIAL_COLUMNS,
 ] as const;
 
 export type TvSnapshot = Record<string, number | string | null>;
@@ -40,6 +43,7 @@ const US_EXCHANGES = ["NASDAQ", "NYSE", "NYSEAMERICAN", "AMEX", "BATS", "OTC"];
 const resolutionCache = new Map<string, string | null>();
 
 export function baseTicker(symbol: string) {
+  symbol=canonicalSymbol(symbol);
   const dot = symbol.lastIndexOf(".");
   const suffix = dot > 0 ? symbol.slice(dot + 1).toUpperCase() : "";
   return { base: dot > 0 ? symbol.slice(0, dot) : symbol, suffix };

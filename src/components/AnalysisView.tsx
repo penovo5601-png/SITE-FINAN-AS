@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import type { StockAnalysis } from "@/lib/engine";
-import CandleChart from "./CandleChart";
+import ResilientCandleChart from "./ResilientCandleChart";
+import CompanyResearchPanel from "./CompanyResearchPanel";
 import ConfluencePanel from "./ConfluencePanel";
 import StockNews from "./StockNews";
 import DecisionPanel from "./DecisionPanel";
@@ -97,6 +98,7 @@ export default function AnalysisView() {
           A cruzar indicadores por famílias e a procurar notícias de {symbol}…
         </p>
       </div>
+      <ResilientCandleChart symbol={symbol} />
       <StockNews key={symbol} symbol={symbol} />
       </>
     );
@@ -120,7 +122,8 @@ export default function AnalysisView() {
           </div>
         </div>
         </div>
-        <StockNews key={symbol} symbol={symbol} />
+        <ResilientCandleChart symbol={symbol} />
+      <StockNews key={symbol} symbol={symbol} />
       </div>
     );
   }
@@ -209,112 +212,15 @@ export default function AnalysisView() {
         </div>
       </div>
 
+      <div className="panel flex flex-wrap items-center justify-between gap-3 p-3">
+        <span className="text-[11px] font-bold uppercase tracking-wider text-ink-400">Período e periodicidade do gráfico</span>
+        <div className="flex flex-wrap gap-2"><div className="flex rounded-lg border border-ink-700 bg-ink-950/60 p-0.5">{RANGES.map(r=><button key={r.value} onClick={()=>setRange(r.value)} className={`rounded-md px-2.5 py-1 text-xs ${range===r.value?"bg-ink-700 text-ink-100":"text-ink-400"}`}>{r.label}</button>)}</div><div className="flex rounded-lg border border-ink-700 bg-ink-950/60 p-0.5">{INTERVALS.map(r=><button key={r.value} onClick={()=>setInterval(r.value)} className={`rounded-md px-2.5 py-1 text-xs ${interval===r.value?"bg-ink-700 text-ink-100":"text-ink-400"}`}>{r.label}</button>)}</div><Link href={`/grafico?symbol=${encodeURIComponent(a.symbol)}`} className="rounded-lg border border-cyan-signal/30 bg-cyan-signal/10 px-3 py-1.5 text-xs font-semibold text-cyan-signal">Analisar foto ↗</Link></div>
+      </div>
+      <ResilientCandleChart symbol={symbol} analysis={a} />
+      <CompanyResearchPanel key={a.symbol} report={a.company} price={a.price} />
       <StockNews key={symbol} symbol={symbol} />
       <DecisionPanel audit={a.decision} currency={a.currency} />
       <ConfluencePanel report={a.confluence} />
-
-      {/* ---------------- GRÁFICO ---------------- */}
-        <div className="panel p-5">
-        {!a.hasHistory && (
-          <div className="mb-4 rounded-xl border border-amber-signal/40 bg-amber-signal/8 px-4 py-3">
-            <p className="text-[12.8px] font-semibold text-amber-signal">
-              Gráfico indisponível nesta consulta — o fornecedor de velas está a limitar pedidos.
-            </p>
-            <p className="mt-1 text-[12px] leading-relaxed text-ink-300">
-              A análise fica limitada aos indicadores que a fonte disponibilizou: foi construída com {a.signals.length} indicadores calculados pelo
-              scanner TradingView (RSI, ADX, médias 10/20/30/50/100/200, MACD, Bollinger, Estocástico, CCI, Williams %R,
-              ATR, volume relativo, pivôs e performance). Carrega em “Recalcular” para tentar novamente o histórico de velas.
-            </p>
-          </div>
-        )}
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <SectionTitle>Gráfico técnico</SectionTitle>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex rounded-lg border border-ink-700 bg-ink-950/70 p-0.5">
-              {RANGES.map((r) => (
-                <button
-                  key={r.value}
-                  onClick={() => setRange(r.value)}
-                  className={`rounded-md px-2.5 py-1 text-[11.5px] font-semibold transition ${range === r.value ? "bg-ink-700 text-ink-100" : "text-ink-400 hover:text-ink-200"}`}
-                >
-                  {r.label}
-                </button>
-              ))}
-            </div>
-            <div className="flex rounded-lg border border-ink-700 bg-ink-950/70 p-0.5">
-              {INTERVALS.map((r) => (
-                <button
-                  key={r.value}
-                  onClick={() => setInterval(r.value)}
-                  className={`rounded-md px-2.5 py-1 text-[11.5px] font-semibold transition ${interval === r.value ? "bg-ink-700 text-ink-100" : "text-ink-400 hover:text-ink-200"}`}
-                >
-                  {r.label}
-                </button>
-              ))}
-            </div>
-            <Link
-              href={`/grafico?symbol=${encodeURIComponent(a.symbol)}`}
-              className="rounded-lg border border-cyan-signal/40 bg-cyan-signal/10 px-3 py-1.5 text-[11.5px] font-semibold text-cyan-signal transition hover:bg-cyan-signal/18"
-            >
-              Analisar foto deste gráfico →
-            </Link>
-          </div>
-        </div>
-        {a.hasHistory && a.candles.length > 0 ? (
-          <CandleChart
-            candles={a.candles}
-            sma20={a.series.sma20}
-            sma50={a.series.sma50}
-            sma200={a.series.sma200}
-            bbUpper={a.series.bbUpper}
-            bbLower={a.series.bbLower}
-            rsi={a.series.rsi14}
-            levels={a.levels}
-            currency={a.currency}
-          />
-        ) : (
-          <div className="grid h-[220px] place-items-center rounded-xl border border-dashed border-ink-700 bg-ink-950/40 text-center">
-            <div>
-              <div className="tnum text-[13px] text-ink-400">Sem velas para desenhar</div>
-              <div className="mt-1 text-[11.5px] text-ink-500">fonte do histórico: {a.historySource || "nenhuma"}</div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {a.fundamentals && (
-        <div className="panel p-6">
-          <SectionTitle
-            right={
-              a.fundamentals.tvSymbol ? (
-                <span className="tnum text-[11px] text-ink-500">fonte: {a.fundamentals.tvSymbol}</span>
-              ) : null
-            }
-          >
-            Contexto fundamental e consenso técnico
-          </SectionTitle>
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 lg:grid-cols-6">
-            <Stat label="Cap. bolsista" value={a.fundamentals.marketCap ? fmtCap(a.fundamentals.marketCap) : "—"} />
-            <Stat label="P/E (TTM)" value={fmt(a.fundamentals.pe, 1)} tone={(a.fundamentals.pe ?? 100) < 15 ? "bull" : (a.fundamentals.pe ?? 0) < 0 ? "bear" : undefined} />
-            <Stat label="Dividendo" value={a.fundamentals.dividendYield != null ? `${a.fundamentals.dividendYield.toFixed(2)}%` : "—"} />
-            <Stat label="Beta (1 ano)" value={fmt(a.fundamentals.beta, 2)} tone={(a.fundamentals.beta ?? 1) > 1.3 ? "bear" : undefined} />
-            <Stat label="P/Book" value={fmt(a.fundamentals.priceBook, 2)} />
-            <Stat label="P/Sales" value={fmt(a.fundamentals.priceSales, 2)} />
-            <Stat label="EPS (TTM)" value={fmt(a.fundamentals.eps, 2)} />
-            <Stat label="ROE" value={a.fundamentals.roe != null ? `${a.fundamentals.roe.toFixed(1)}%` : "—"} tone={(a.fundamentals.roe ?? 0) > 12 ? "bull" : undefined} />
-            <Stat label="Vol. semanal" value={a.fundamentals.volatilityWeek != null ? `${a.fundamentals.volatilityWeek.toFixed(2)}%` : "—"} />
-            <Stat label="Vol. mensal" value={a.fundamentals.volatilityMonth != null ? `${a.fundamentals.volatilityMonth.toFixed(2)}%` : "—"} />
-            <Stat label="Consenso diário" value={recLabel(a.fundamentals.tvRecommendAll)} tone={recTone(a.fundamentals.tvRecommendAll)} />
-            <Stat label="Consenso semanal" value={recLabel(a.fundamentals.tvRecommendWeekly)} tone={recTone(a.fundamentals.tvRecommendWeekly)} />
-          </div>
-          {a.fundamentals.industry && (
-            <p className="mt-3 text-[12px] text-ink-400">
-              Indústria: <span className="text-ink-200">{a.fundamentals.industry}</span>
-              {a.fundamentals.nextEarnings && <> · Próximos resultados: <span className="tnum text-ink-200">{a.fundamentals.nextEarnings.slice(0, 10)}</span></>}
-            </p>
-          )}
-        </div>
-      )}
 
       {/* ---------------- PLANO ---------------- */}
       <div className="grid gap-5 lg:grid-cols-[1fr_1fr]">
@@ -475,15 +381,15 @@ export default function AnalysisView() {
         </div>
 
         <div className="panel p-6">
-          <SectionTitle>Rentabilidade</SectionTitle>
+          <SectionTitle>Resumo técnico · sessões</SectionTitle>
           <div className="space-y-2.5">
             {[
               ["1 sessão", a.performance.d1],
-              ["1 semana", a.performance.w1],
-              ["1 mês", a.performance.m1],
-              ["3 meses", a.performance.m3],
-              ["6 meses", a.performance.m6],
-              ["1 ano", a.performance.y1],
+              ["5 sessões", a.performance.w1],
+              ["21 sessões", a.performance.m1],
+              ["63 sessões", a.performance.m3],
+              ["126 sessões", a.performance.m6],
+              ["252 sessões", a.performance.y1],
             ].map(([label, value]) => {
               const v = value as number | null;
               return (

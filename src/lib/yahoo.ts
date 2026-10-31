@@ -29,11 +29,13 @@ export type ChartBundle = {
   interval: string;
   range: string;
   fetchedAt: number;
+  priceBasis?: "adjusted" | "unadjusted";
+  cached?: boolean;
+  discardedBars?: number;
 };
 
 const HOSTS = ["https://query1.finance.yahoo.com", "https://query2.finance.yahoo.com"];
-const UA =
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
+const UA = "Mozilla/5.0";
 
 const cache = new Map<string, { at: number; data: ChartBundle }>();
 const TTL = 8 * 60 * 1000;
@@ -52,7 +54,7 @@ function cleanCandles(raw: {
     const o = q.open?.[i];
     const h = q.high?.[i];
     const l = q.low?.[i];
-    if (c == null || o == null || h == null || l == null || !isFinite(c)) continue;
+    if (c == null || o == null || h == null || l == null || ![c,o,h,l].every(Number.isFinite) || Math.min(c,o,h,l)<=0 || h+1e-8<Math.max(o,c,l) || l-1e-8>Math.min(o,c,h)) continue;
     const a = adj?.[i];
     const factor = a && isFinite(a) && a > 0 && c > 0 ? a / c : 1;
     out.push({
@@ -76,10 +78,10 @@ export async function fetchChart(
 ): Promise<ChartBundle | null> {
   const key = `${symbol}|${range}|${interval}`;
   const hit = cache.get(key);
-  if (!force && hit && Date.now() - hit.at < TTL) return hit.data;
+  if (!force && hit && Date.now() - hit.at < TTL) return {...hit.data,cached:true};
 
   const url = (host: string) =>
-    `${host}/v8/finance/chart/${encodeURIComponent(symbol)}?range=${range}&interval=${interval}&includePrePost=false&events=div%2Csplit`;
+    `${host}/v8/finance/chart/${encodeURIComponent(symbol)}?range=${range}&interval=${interval}`;
 
   for (const host of HOSTS) {
     try {
@@ -100,7 +102,9 @@ export async function fetchChart(
         quote: (result.indicators?.quote?.[0] ?? {}) as never,
         adjclose: (result.indicators?.adjclose ?? []) as never,
       });
-      if (candles.length < 5) continue;
+      if (candles.length < 2) continue;
+      if (String(m.symbol ?? symbol).toUpperCase() !== symbol.toUpperCase()) continue;
+      if (String(m.instrumentType ?? "EQUITY").toUpperCase() !== "EQUITY") continue;
       const meta: QuoteMeta = {
         symbol: String(m.symbol ?? symbol),
         currency: String(m.currency ?? "USD"),
@@ -116,14 +120,14 @@ export async function fetchChart(
         shortName: m.shortName ? String(m.shortName) : undefined,
         timezone: m.exchangeTimezoneName ? String(m.exchangeTimezoneName) : undefined,
       };
-      const bundle: ChartBundle = { meta, candles, interval, range, fetchedAt: Date.now() };
+      const bundle: ChartBundle = { meta, candles, interval, range, fetchedAt: Date.now(), priceBasis: result.indicators?.adjclose?.length ? "adjusted" : "unadjusted", discardedBars: Math.max(0,(result.timestamp?.length??0)-candles.length) };
       cache.set(key, { at: Date.now(), data: bundle });
       return bundle;
     } catch {
       // tenta o host seguinte
     }
   }
-  return hit?.data ?? null;
+  return hit ? {...hit.data,cached:true} : null;
 }
 
 export const RANGE_OPTIONS = [

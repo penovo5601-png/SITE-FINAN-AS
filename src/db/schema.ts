@@ -94,3 +94,10 @@ export const watchlist = pgTable(
 export type Ticker = typeof tickers.$inferSelect;
 export type AnalysisRow = typeof analyses.$inferSelect;
 export type ChartReport = typeof chartReports.$inferSelect;
+
+/** Histórico real persistente, identificado pelo ticker completo e bolsa/sufixo. */
+export const marketHistoryCache = pgTable("market_history_cache", {
+  symbol: varchar("symbol", {length:32}).primaryKey(),
+  payload: jsonb("payload").notNull(),
+  updatedAt: timestamp("updated_at", {withTimezone:true}).defaultNow().notNull(),
+});
