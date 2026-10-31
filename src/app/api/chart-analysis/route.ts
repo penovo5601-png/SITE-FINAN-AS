@@ -5,7 +5,7 @@ import { chartReports } from "@/db/schema";
 import { analyzeChartImage } from "@/lib/chart-image";
 import { analyzeFromScanner, analyzeStock } from "@/lib/engine";
 import { COUNTRY_CURRENCY, getMarketData } from "@/lib/market-data";
-import { ensureSeeded, getTicker } from "@/lib/universe";
+import { ensureSeeded, getTicker, isDbAvailable } from "@/lib/universe";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -175,6 +175,8 @@ function combinedProb(a: number, b: number) {
 
 export async function GET() {
   await ensureSeeded();
+  if (!isDbAvailable()) return NextResponse.json({ count: 0, reports: [], database: "índice em memória" });
+  try {
   const rows = await db
     .select({
       id: chartReports.id,
@@ -191,4 +193,7 @@ export async function GET() {
     .orderBy(desc(chartReports.id))
     .limit(50);
   return NextResponse.json({ count: rows.length, reports: rows });
+  } catch {
+    return NextResponse.json({ count: 0, reports: [], database: "indisponível" });
+  }
 }
