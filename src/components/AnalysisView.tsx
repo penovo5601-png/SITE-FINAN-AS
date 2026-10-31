@@ -7,6 +7,9 @@ import type { StockAnalysis } from "@/lib/engine";
 import CandleChart from "./CandleChart";
 import ConfluencePanel from "./ConfluencePanel";
 import StockNews from "./StockNews";
+import ScenarioPanel from "./ScenarioPanel";
+import type { ScenarioResult } from "@/lib/scenarios";
+import type { NewsImpact } from "@/lib/news-impact";
 import { Meter, ScoreDial, SectionTitle, Stat, VerdictBadge, type Verdict } from "./ui";
 
 const RANGES = [
@@ -54,6 +57,8 @@ export default function AnalysisView() {
   const [range, setRange] = useState("2y");
   const [interval, setInterval] = useState("1d");
   const [data, setData] = useState<StockAnalysis | null>(null);
+  const [scenario, setScenario] = useState<ScenarioResult | null>(null);
+  const [newsImpact, setNewsImpact] = useState<NewsImpact | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -73,6 +78,8 @@ export default function AnalysisView() {
       } else {
         setData(json.analysis as StockAnalysis);
         setWarnings(json.warnings ?? []);
+        setScenario(json.scenario ?? null);
+        setNewsImpact(json.newsImpact ?? null);
       }
     } catch (e) {
       if (!signal?.aborted) setError(String(e));
@@ -394,6 +401,9 @@ export default function AnalysisView() {
           )}
         </div>
       </div>
+
+      {/* ---------------- CENÁRIOS / VALIDAÇÃO ---------------- */}
+      {scenario && <ScenarioPanel scenario={scenario} newsImpact={newsImpact} currency={a.currency} />}
 
       {/* ---------------- SINAIS ---------------- */}
       <div className="panel p-6">
