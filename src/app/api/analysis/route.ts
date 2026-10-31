@@ -3,6 +3,7 @@ import { fetchStockNews } from "@/lib/news";
 import { analyzeMarket, RESEARCH_VERSION } from "@/lib/analyze-market";
 import { COUNTRY_CURRENCY, getMarketData } from "@/lib/market-data";
 import { ensureSeeded, getTicker, saveAnalysis } from "@/lib/universe";
+import { buildFundamentalReport, type FundamentalRaw } from "@/lib/fundamentals";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -57,6 +58,13 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: `Sem dados suficientes para analisar "${symbol}".`, symbol }, { status: 404 });
   }
 
+  // Fundamentais reais (TradingView → moeda de cotação): rentabilidade, crescimento, balanço, consistência, valor intrínseco
+  const fundamentalReport = buildFundamentalReport(
+    md.scanner ? ({ ...(md.scanner as FundamentalRaw) }) : null,
+    analysis.price,
+    (md.validationCandles ?? md.candles ?? []).map((c) => ({ t: c.t, c: c.c })),
+  );
+
   const warnings: string[] = [...(analysis.sourceNotes ?? [])];
   if (!info) warnings.push(`"${symbol}" não consta do universo indexado; a análise usou apenas os dados dos fornecedores.`);
   if (analysis.hasHistory && analysis.bars < 120) warnings.push(`Histórico curto (${analysis.bars} sessões): os indicadores de longo prazo são menos fiáveis.`);
@@ -89,5 +97,5 @@ export async function GET(req: Request) {
     },
   });
 
-  return NextResponse.json({ analysis, warnings, source: md.source, historySource: md.historySource, version: RESEARCH_VERSION });
+  return NextResponse.json({ analysis, fundamentalReport, warnings, source: md.source, historySource: md.historySource, version: RESEARCH_VERSION });
 }

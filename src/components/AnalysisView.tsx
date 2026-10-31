@@ -8,6 +8,8 @@ import CandleChart from "./CandleChart";
 import ConfluencePanel from "./ConfluencePanel";
 import StockNews from "./StockNews";
 import DecisionPanel from "./DecisionPanel";
+import FundamentalsPanel from "./FundamentalsPanel";
+import type { FundamentalReport } from "@/lib/fundamentals";
 import { Meter, ScoreDial, SectionTitle, Stat, VerdictBadge, type Verdict } from "./ui";
 
 const RANGES = [
@@ -55,6 +57,7 @@ export default function AnalysisView() {
   const [range, setRange] = useState("2y");
   const [interval, setInterval] = useState("1d");
   const [data, setData] = useState<StockAnalysis | null>(null);
+  const [fundamentalReport, setFundamentalReport] = useState<FundamentalReport | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -73,6 +76,7 @@ export default function AnalysisView() {
         setData(null);
       } else {
         setData(json.analysis as StockAnalysis);
+        setFundamentalReport(json.fundamentalReport ?? null);
         setWarnings(json.warnings ?? []);
       }
     } catch (e) {
@@ -211,6 +215,9 @@ export default function AnalysisView() {
 
       <StockNews key={symbol} symbol={symbol} />
       <DecisionPanel audit={a.decision} currency={a.currency} />
+
+      {/* ---------------- FUNDAMENTAIS REAIS ---------------- */}
+      {fundamentalReport && <FundamentalsPanel r={fundamentalReport} price={a.price} currency={a.currency} />}
       <ConfluencePanel report={a.confluence} />
 
       {/* ---------------- GRÁFICO ---------------- */}

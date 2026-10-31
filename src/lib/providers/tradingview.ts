@@ -18,6 +18,16 @@ export const TV_COLUMNS = [
   "Pivot.M.Classic.S3", "Pivot.M.Classic.R3",
   "RSI|1W", "ADX|1W", "Recommend.All|1W", "RSI|1M", "Recommend.All|1M",
   "ADX+DI", "ADX-DI", "Ichimoku.BLine", "VWMA", "HullMA9", "Stoch.RSI.K", "Stoch.RSI.D", "UO", "BBPower",
+  // ---- fundamentais (rentabilidade, crescimento, balanço, dividendos, valor intrínseco) ----
+  "fundamental_currency_code", "Perf.3Y", "Perf.5Y", "Perf.10Y",
+  "return_on_assets", "return_on_invested_capital", "gross_margin", "operating_margin", "net_margin", "free_cash_flow_margin_ttm", "free_cash_flow_ttm",
+  "earnings_per_share_diluted_ttm", "revenue_per_share_ttm", "book_value_per_share_fq",
+  "total_revenue_yoy_growth_ttm", "earnings_per_share_diluted_yoy_growth_ttm", "net_income_yoy_growth_ttm", "free_cash_flow_yoy_growth_ttm", "ebitda_yoy_growth_ttm",
+  "debt_to_equity", "current_ratio", "quick_ratio", "total_debt", "net_debt", "cash_n_short_term_invest_fq", "total_assets",
+  "enterprise_value_ebitda_ttm", "enterprise_value_fq", "ebitda", "total_revenue", "net_income",
+  "dividends_yield_fy", "dividend_payout_ratio_ttm", "continuous_dividend_growth", "continuous_dividend_payout", "dps_common_stock_prim_issue_yoy_growth_fy",
+  "price_target_average", "price_target_high", "price_target_low", "recommendation_mark", "earnings_release_next_date",
+  "eps_surprise_percent_fq", "revenue_surprise_percent_fq", "total_shares_outstanding_fundamental", "price_book_fq",
 ] as const;
 
 export type TvSnapshot = Record<string, number | string | null>;

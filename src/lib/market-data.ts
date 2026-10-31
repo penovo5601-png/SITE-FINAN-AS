@@ -3,7 +3,7 @@ import { fetchChart } from "./yahoo";
 import { fetchNasdaqHistory } from "./providers/nasdaq";
 import { baseTicker, fetchTradingView, num, type TvSnapshot } from "./providers/tradingview";
 
-export type DataSource = "yahoo" | "nasdaq" | "tradingview" | "nenhuma";
+export type DataSource = "yahoo" | "wsj" | "nasdaq" | "cache" | "tradingview" | "nenhuma";
 
 export type MarketData = {
   symbol: string;
@@ -75,7 +75,9 @@ export async function getMarketData(
   ]);
 
   let candles: Candle[] | null = bundle?.candles ?? null;
-  let historySource: DataSource = bundle ? "yahoo" : "nenhuma";
+  const bundleSrc = (bundle as (ChartBundle & { source?: string; notes?: string[] }) | null)?.source;
+  let historySource: DataSource = bundle ? ((bundleSrc === "wsj" || bundleSrc === "nasdaq" || bundleSrc === "cache" ? bundleSrc : "yahoo") as DataSource) : "nenhuma";
+  for (const n of (bundle as (ChartBundle & { notes?: string[] }) | null)?.notes ?? []) notes.push(n);
 
   if (!candles || candles.length < 40) {
     if (isUs) {

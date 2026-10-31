@@ -1,3 +1,4 @@
+import { getCandles } from "./candles";
 export type Candle = {
   t: number; // epoch ms
   o: number;
@@ -67,7 +68,7 @@ function cleanCandles(raw: {
   return out;
 }
 
-/** Descarrega histórico OHLCV do Yahoo Finance (sem chave de API). */
+/** Descarrega histórico OHLCV com múltiplos fornecedores (Yahoo c/ retries → WSJ → Nasdaq). Nunca depende de um único serviço. */
 export async function fetchChart(
   symbol: string,
   range = "2y",
@@ -77,53 +78,29 @@ export async function fetchChart(
   const key = `${symbol}|${range}|${interval}`;
   const hit = cache.get(key);
   if (!force && hit && Date.now() - hit.at < TTL) return hit.data;
-
-  const url = (host: string) =>
-    `${host}/v8/finance/chart/${encodeURIComponent(symbol)}?range=${range}&interval=${interval}&includePrePost=false&events=div%2Csplit`;
-
-  for (const host of HOSTS) {
-    try {
-      const res = await fetch(url(host), {
-        headers: { "User-Agent": UA, Accept: "application/json" },
-        signal: AbortSignal.timeout(8000),
-        cache: "no-store",
-      });
-      if (!res.ok) continue;
-      const json = (await res.json()) as {
-        chart?: { error?: { code?: string; description?: string } | null; result?: Array<{ meta?: Record<string, unknown>; timestamp?: number[]; indicators?: { quote?: unknown[]; adjclose?: unknown[] } }> };
-      };
-      const result = json.chart?.result?.[0];
-      if (!result || !result.meta) continue;
-      const m = result.meta as Record<string, unknown>;
-      const candles = cleanCandles({
-        timestamp: result.timestamp,
-        quote: (result.indicators?.quote?.[0] ?? {}) as never,
-        adjclose: (result.indicators?.adjclose ?? []) as never,
-      });
-      if (candles.length < 5) continue;
-      const meta: QuoteMeta = {
-        symbol: String(m.symbol ?? symbol),
-        currency: String(m.currency ?? "USD"),
-        exchangeName: String(m.exchangeName ?? ""),
-        fullExchangeName: String(m.fullExchangeName ?? m.exchangeName ?? ""),
-        instrumentType: String(m.instrumentType ?? "EQUITY"),
-        regularMarketPrice: Number(m.regularMarketPrice ?? candles[candles.length - 1].c),
-        previousClose: Number(m.previousClose ?? candles[candles.length - 2]?.c ?? candles[candles.length - 1]?.c ?? 0),
-        regularMarketTime: Number(m.regularMarketTime ?? candles[candles.length - 1].t / 1000),
-        fiftyTwoWeekHigh: m.fiftyTwoWeekHigh ? Number(m.fiftyTwoWeekHigh) : undefined,
-        fiftyTwoWeekLow: m.fiftyTwoWeekLow ? Number(m.fiftyTwoWeekLow) : undefined,
-        longName: m.longName ? String(m.longName) : undefined,
-        shortName: m.shortName ? String(m.shortName) : undefined,
-        timezone: m.exchangeTimezoneName ? String(m.exchangeTimezoneName) : undefined,
-      };
-      const bundle: ChartBundle = { meta, candles, interval, range, fetchedAt: Date.now() };
-      cache.set(key, { at: Date.now(), data: bundle });
-      return bundle;
-    } catch {
-      // tenta o host seguinte
-    }
-  }
-  return hit?.data ?? null;
+  const r = (range === "5y" || range === "max") ? "5y" : range === "1y" || range === "6mo" || range === "3mo" || range === "1mo" ? "1y" : "2y";
+  const res = await getCandles(symbol, r as "1y" | "2y" | "5y");
+  if (!res.candles.length) return hit?.data ?? null;
+  const candles: Candle[] = res.candles.map((c) => ({ t: c.t, o: c.o, h: c.h, l: c.l, c: c.c, v: c.v }));
+  const m = res.meta ?? {};
+  const meta: QuoteMeta = {
+    symbol,
+    currency: String(m.currency ?? "USD"),
+    exchangeName: String(m.exchangeName ?? ""),
+    fullExchangeName: String(m.exchangeName ?? ""),
+    instrumentType: String(m.instrumentType ?? "EQUITY"),
+    regularMarketPrice: Number(m.regularMarketPrice ?? candles[candles.length - 1].c),
+    previousClose: Number(m.previousClose ?? candles[candles.length - 2]?.c ?? candles[candles.length - 1].c),
+    regularMarketTime: Math.round(candles[candles.length - 1].t / 1000),
+    fiftyTwoWeekHigh: m.fiftyTwoWeekHigh ? Number(m.fiftyTwoWeekHigh) : undefined,
+    fiftyTwoWeekLow: m.fiftyTwoWeekLow ? Number(m.fiftyTwoWeekLow) : undefined,
+    longName: m.longName ? String(m.longName) : undefined,
+    shortName: m.shortName ? String(m.shortName) : undefined,
+    timezone: undefined,
+  };
+  const bundle: ChartBundle & { source?: string; notes?: string[] } = { meta, candles, interval, range, fetchedAt: Date.now(), source: res.source, notes: res.notes };
+  cache.set(key, { at: Date.now(), data: bundle });
+  return bundle;
 }
 
 export const RANGE_OPTIONS = [
