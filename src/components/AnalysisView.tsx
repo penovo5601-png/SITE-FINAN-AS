@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import type { StockAnalysis } from "@/lib/engine";
+import type { NewsItem } from "@/lib/news";
 import CandleChart from "./CandleChart";
 import { Meter, ScoreDial, SectionTitle, Stat, VerdictBadge, type Verdict } from "./ui";
 
@@ -53,6 +54,8 @@ export default function AnalysisView() {
   const [interval, setInterval] = useState("1d");
   const [data, setData] = useState<StockAnalysis | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
+  const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
+  const [newsSummary, setNewsSummary] = useState<{ score: number; label: string; positive: number; negative: number; neutral: number; scoreImpact: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -69,6 +72,8 @@ export default function AnalysisView() {
       } else {
         setData(json.analysis as StockAnalysis);
         setWarnings(json.warnings ?? []);
+        setNewsItems(json.newsItems ?? []);
+        setNewsSummary(json.newsSummary ?? null);
       }
     } catch (e) {
       setError(String(e));
@@ -86,7 +91,7 @@ export default function AnalysisView() {
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
         <div className="h-10 w-10 animate-spin rounded-full border-2 border-ink-700 border-t-bull-400" />
         <p className="tnum text-[13px] text-ink-400">
-          A descarregar histórico e a calcular 25+ indicadores para {symbol}…
+          A descarregar histórico, notícias e a calcular 35+ indicadores para {symbol}…
         </p>
       </div>
     );
@@ -113,7 +118,7 @@ export default function AnalysisView() {
   }
 
   const a = data;
-  const groups = ["Tendência", "Momento", "Volume", "Volatilidade", "Padrões"] as const;
+  const groups = ["Tendência", "Momento", "Volume", "Volatilidade", "Padrões", "Notícias"] as const;
 
   return (
     <div className="space-y-6">
@@ -377,6 +382,112 @@ export default function AnalysisView() {
             </>
           )}
         </div>
+      </div>
+
+
+      {/* ---------------- INDICADORES ADICIONAIS ---------------- */}
+      {a.extra && (a.extra.ichimoku || a.extra.parabolicSar) && (
+        <div className="panel p-6">
+          <SectionTitle right={<span className="tnum text-[11px] text-ink-500">confluência: <span className="text-bull-400 font-bold">▲ {a.extra.bullishSignals}</span> · <span className="text-bear-400 font-bold">▼ {a.extra.bearishSignals}</span></span>}>
+            Indicadores adicionais de confluência
+          </SectionTitle>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {a.extra.ichimoku && (
+              <div className="rounded-xl border border-ink-800 bg-ink-950/60 p-4">
+                <div className="text-[11px] uppercase tracking-wider text-ink-500">Ichimoku</div>
+                <div className={`mt-1 text-sm font-bold ${a.extra.ichimoku.position.includes("Acima") ? "text-bull-400" : a.extra.ichimoku.position.includes("Abaixo") ? "text-bear-400" : "text-ink-200"}`}>{a.extra.ichimoku.position}</div>
+                <div className="tnum mt-1 text-[12px] text-ink-300">Tenkan {fmt(a.extra.ichimoku.tenkan)} · Kijun {fmt(a.extra.ichimoku.kijun)}</div>
+                <div className="text-[11px] text-ink-400">{a.extra.ichimoku.tkCross}</div>
+              </div>
+            )}
+            {a.extra.parabolicSar && (
+              <div className="rounded-xl border border-ink-800 bg-ink-950/60 p-4">
+                <div className="text-[11px] uppercase tracking-wider text-ink-500">Parabolic SAR</div>
+                <div className="tnum mt-1 text-lg font-bold text-ink-100">{fmt(a.extra.parabolicSar.value)}</div>
+                <div className={`text-[12px] font-semibold ${a.extra.parabolicSar.signal.includes("compra") ? "text-bull-400" : "text-bear-400"}`}>{a.extra.parabolicSar.signal}</div>
+              </div>
+            )}
+            {a.extra.vwap20 && (
+              <div className="rounded-xl border border-ink-800 bg-ink-950/60 p-4">
+                <div className="text-[11px] uppercase tracking-wider text-ink-500">VWAP (20 sessões)</div>
+                <div className="tnum mt-1 text-lg font-bold text-ink-100">{fmt(a.extra.vwap20.value)}</div>
+                <div className={`text-[12px] font-semibold ${a.extra.vwap20.position.includes("Acima") ? "text-bull-400" : "text-bear-400"}`}>{a.extra.vwap20.position}</div>
+              </div>
+            )}
+            {a.extra.aroon && (
+              <div className="rounded-xl border border-ink-800 bg-ink-950/60 p-4">
+                <div className="text-[11px] uppercase tracking-wider text-ink-500">Aroon (25) · Cruzamentos</div>
+                <div className="tnum mt-1 text-sm font-bold text-ink-100">Up {a.extra.aroon.up.toFixed(0)} / Down {a.extra.aroon.down.toFixed(0)}</div>
+                <div className="text-[12px] text-ink-300">{a.extra.goldenCross ? "⭐ Golden Cross recente" : a.extra.deathCross ? "☠ Death Cross recente" : "Sem cruzamento 50/200 recente"}</div>
+                {a.extra.rsiDivergence && <div className="mt-1 text-[11px] text-amber-300">{a.extra.rsiDivergence}</div>}
+              </div>
+            )}
+            {a.extra.fibonacci && (
+              <div className="rounded-xl border border-ink-800 bg-ink-950/60 p-4 sm:col-span-2 xl:col-span-4">
+                <div className="flex items-center justify-between text-[11px] uppercase tracking-wider text-ink-500">
+                  <span>Retrações de Fibonacci (swing 60 sessões)</span>
+                  <span className="text-amber-300">nível mais próximo: {a.extra.fibonacci.nearest}</span>
+                </div>
+                <div className="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-7">
+                  {a.extra.fibonacci.levels.map((l) => (
+                    <div key={l.label} className={`rounded-lg border p-2 text-center ${l.label === a.extra.fibonacci!.nearest ? "border-amber-400/60 bg-amber-500/10" : "border-ink-800 bg-ink-950"}`}>
+                      <div className="text-[10px] text-ink-500">{l.label}</div>
+                      <div className="tnum text-[12px] font-bold text-ink-100">{fmt(l.price)}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ---------------- NOTÍCIAS ---------------- */}
+      <div className="panel p-6">
+        <SectionTitle right={newsSummary ? (
+          <span className={`tnum text-[11px] font-bold ${newsSummary.score >= 12 ? "text-bull-400" : newsSummary.score <= -12 ? "text-bear-400" : "text-ink-400"}`}>
+            {newsSummary.label} · {newsSummary.score > 0 ? "+" : ""}{newsSummary.score} · impacto {newsSummary.scoreImpact > 0 ? "+" : ""}{newsSummary.scoreImpact} pts
+          </span>
+        ) : undefined}>
+          Notícias associadas a {a.symbol}
+        </SectionTitle>
+        {newsSummary && (
+          <div className="mb-4 flex items-center gap-3 text-[11px] text-ink-400">
+            <div className="flex h-1.5 flex-1 overflow-hidden rounded-full bg-ink-800">
+              <div className="h-full bg-bull-500" style={{ width: `${(newsSummary.positive / Math.max(1, newsItems.length)) * 100}%` }} />
+              <div className="h-full bg-ink-600" style={{ width: `${(newsSummary.neutral / Math.max(1, newsItems.length)) * 100}%` }} />
+              <div className="h-full bg-bear-500" style={{ width: `${(newsSummary.negative / Math.max(1, newsItems.length)) * 100}%` }} />
+            </div>
+            <span className="text-bull-400">▲ {newsSummary.positive}</span>
+            <span>{newsSummary.neutral} neutras</span>
+            <span className="text-bear-400">▼ {newsSummary.negative}</span>
+          </div>
+        )}
+        {newsItems.length === 0 ? (
+          <p className="text-[13px] text-ink-400">Sem notícias recentes encontradas para esta ação. O veredito baseia-se apenas nos indicadores técnicos.</p>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2">
+            {newsItems.map((nw, i) => (
+              <a key={i} href={nw.link} target="_blank" rel="noopener noreferrer" className="group flex gap-3 rounded-xl border border-ink-800 bg-ink-950/60 p-3 transition hover:border-ink-600">
+                {nw.thumbnail ? (
+                  <img src={nw.thumbnail} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover bg-ink-800" />
+                ) : (
+                  <div className="grid h-14 w-14 shrink-0 place-items-center rounded-lg bg-ink-800 text-ink-500 text-lg">📰</div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 text-[10px] text-ink-500">
+                    <span className="truncate font-semibold text-ink-300">{nw.source}</span>
+                    <span>·</span>
+                    <span>{new Date(nw.publishedAt).toLocaleDateString("pt-PT")}</span>
+                    <span className={`ml-auto rounded px-1.5 py-0.5 font-bold ${nw.sentiment === "POSITIVA" ? "bg-bull-500/15 text-bull-400" : nw.sentiment === "NEGATIVA" ? "bg-bear-500/15 text-bear-400" : "bg-ink-800 text-ink-300"}`}>{nw.sentiment}</span>
+                  </div>
+                  <div className="mt-1 line-clamp-2 text-[13px] font-semibold leading-snug text-ink-100 group-hover:text-bull-300">{nw.title}</div>
+                  <div className="mt-1 text-[10px] text-ink-500">{nw.origin} ↗</div>
+                </div>
+              </a>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ---------------- SINAIS ---------------- */}

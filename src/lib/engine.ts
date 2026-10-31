@@ -27,6 +27,21 @@ import {
 
 export type Verdict = "SUBIR" | "DESCER" | "NEUTRO";
 
+export type NewsInput = { score: number; label: string; positive: number; negative: number; count: number } | null;
+
+export type ExtraIndicators = {
+  ichimoku: { tenkan: number; kijun: number; spanA: number; spanB: number; position: string; tkCross: string } | null;
+  parabolicSar: { value: number; signal: string } | null;
+  vwap20: { value: number; position: string } | null;
+  fibonacci: { high: number; low: number; levels: { label: string; price: number }[]; nearest: string } | null;
+  aroon: { up: number; down: number } | null;
+  goldenCross: boolean;
+  deathCross: boolean;
+  rsiDivergence: string | null;
+  bullishSignals: number;
+  bearishSignals: number;
+};
+
 /** Snapshot genérico do scanner TradingView. */
 export type TvLike = Record<string, number | string | null>;
 
@@ -69,7 +84,7 @@ export function buildFundamentals(s: TvLike | null | undefined): Fundamentals | 
 
 export type Signal = {
   id: string;
-  group: "Tendência" | "Momento" | "Volume" | "Volatilidade" | "Padrões";
+  group: "Tendência" | "Momento" | "Volume" | "Volatilidade" | "Padrões" | "Notícias";
   name: string;
   value: string;
   bias: number; // -100 (muito baixista) .. +100 (muito altista)
@@ -192,6 +207,8 @@ export type StockAnalysis = {
   timeframes: { label: string; score: number; verdict: Verdict }[];
   signals: Signal[];
   indicators: IndicatorSnapshot;
+  extra: ExtraIndicators;
+  news: NewsInput;
   performance: Performance;
   levels: Level[];
   patterns: string[];
@@ -318,6 +335,7 @@ export function analyzeStock(
     scanner?: TvLike | null;
     historySource?: string;
     sourceNotes?: string[];
+    news?: NewsInput;
   } = {},
 ): StockAnalysis {
   const candles = bundle.candles;
@@ -672,6 +690,113 @@ export function analyzeStock(
     });
   }
 
+
+  // ---------------- INDICADORES ADICIONAIS (confluência alargada) ----------------
+  const highsArr = candles.map((c) => c.h);
+  const lowsArr = candles.map((c) => c.l);
+  const midHL = (p: number) => (Math.max(...highsArr.slice(-p)) + Math.min(...lowsArr.slice(-p))) / 2;
+  const tenkan = midHL(Math.min(9, n));
+  const kijun = midHL(Math.min(26, n));
+  const spanA = (tenkan + kijun) / 2;
+  const spanB = midHL(Math.min(52, n));
+  const cloudTop = Math.max(spanA, spanB);
+  const cloudBot = Math.min(spanA, spanB);
+  const ichiPos = price > cloudTop ? "Acima da nuvem (altista)" : price < cloudBot ? "Abaixo da nuvem (baixista)" : "Dentro da nuvem (indefinido)";
+  const tkCross = tenkan > kijun ? "Tenkan > Kijun (altista)" : tenkan < kijun ? "Tenkan < Kijun (baixista)" : "Sem cruzamento";
+  add({
+    id: "ichimoku", group: "Tendência", name: "Ichimoku (nuvem Kumo)", value: ichiPos.split(" (")[0],
+    bias: (price > cloudTop ? 45 : price < cloudBot ? -45 : 0) + (tenkan > kijun ? 15 : tenkan < kijun ? -15 : 0),
+    weight: 0.7,
+    detail: `Tenkan ${fmt(tenkan)} · Kijun ${fmt(kijun)} · nuvem ${fmt(cloudBot)}–${fmt(cloudTop)}. ${ichiPos}; ${tkCross}.`,
+  });
+
+  // Parabolic SAR
+  let sarUp = highsArr[1] > highsArr[0];
+  let sar = sarUp ? lowsArr[0] : highsArr[0];
+  let ep = sarUp ? highsArr[1] : lowsArr[1];
+  let af = 0.02;
+  for (let i = 2; i < n; i++) {
+    sar = sar + af * (ep - sar);
+    if (sarUp) {
+      sar = Math.min(sar, lowsArr[i - 1], lowsArr[i - 2]);
+      if (lowsArr[i] < sar) { sarUp = false; sar = ep; ep = lowsArr[i]; af = 0.02; }
+      else if (highsArr[i] > ep) { ep = highsArr[i]; af = Math.min(0.2, af + 0.02); }
+    } else {
+      sar = Math.max(sar, highsArr[i - 1], highsArr[i - 2]);
+      if (highsArr[i] > sar) { sarUp = true; sar = ep; ep = highsArr[i]; af = 0.02; }
+      else if (lowsArr[i] < ep) { ep = lowsArr[i]; af = Math.min(0.2, af + 0.02); }
+    }
+  }
+  const sarSignal = sar < price ? "SAR abaixo do preço (compra)" : "SAR acima do preço (venda)";
+  add({ id: "psar", group: "Tendência", name: "Parabolic SAR", value: fmt(sar), bias: sar < price ? 35 : -35, weight: 0.5, detail: `${sarSignal}; distância ${pct(((price - sar) / price) * 100, 1)}.` });
+
+  // VWAP 20 sessões
+  const w20 = candles.slice(-20);
+  const vwapDen = w20.reduce((a, c) => a + c.v, 0) || 1;
+  const vwap20 = w20.reduce((a, c) => a + ((c.h + c.l + c.c) / 3) * c.v, 0) / vwapDen;
+  add({ id: "vwap", group: "Volume", name: "VWAP (20 sessões)", value: fmt(vwap20), bias: clamp(((price - vwap20) / vwap20) * 100 * 6), weight: 0.45, detail: price >= vwap20 ? "Preço acima do VWAP: compradores pagam acima do preço médio ponderado por volume." : "Preço abaixo do VWAP: o fluxo institucional médio está em perda." });
+
+  // Golden / Death Cross recente (SMA50 vs SMA200 nas últimas 10 sessões)
+  const s50arr = s50, s200arr = s200;
+  const gc = (s50arr[n - 1] ?? 0) > (s200arr[n - 1] ?? 0) && (s50arr[Math.max(0, n - 11)] ?? 0) <= (s200arr[Math.max(0, n - 11)] ?? 0);
+  const dc = (s50arr[n - 1] ?? 0) < (s200arr[n - 1] ?? 0) && (s50arr[Math.max(0, n - 11)] ?? 0) >= (s200arr[Math.max(0, n - 11)] ?? 0);
+  if (gc || dc) add({ id: "cross", group: "Tendência", name: gc ? "Golden Cross (50/200)" : "Death Cross (50/200)", value: gc ? "Recente" : "Recente", bias: gc ? 60 : -60, weight: 0.8, detail: gc ? "A SMA50 cruzou acima da SMA200 nas últimas sessões — sinal estrutural de alta." : "A SMA50 cruzou abaixo da SMA200 nas últimas sessões — sinal estrutural de baixa." });
+
+  // EMA 9/21
+  if (ind.ema9 != null && ind.ema21 != null) {
+    add({ id: "ema921", group: "Tendência", name: "EMA 9 vs EMA 21", value: `${fmt(ind.ema9)} / ${fmt(ind.ema21)}`, bias: clamp(((ind.ema9 - ind.ema21) / ind.ema21) * 100 * 12), weight: 0.55, detail: ind.ema9 > ind.ema21 ? "Média rápida acima da lenta: momentum de curto prazo favorável." : "Média rápida abaixo da lenta: momentum de curto prazo desfavorável." });
+  }
+
+  // ROC 12
+  if (ind.roc12 != null) add({ id: "roc12", group: "Momento", name: "ROC (12)", value: pct(ind.roc12, 2), bias: clamp(ind.roc12 * 5), weight: 0.45, detail: ind.roc12 > 1.5 ? "Taxa de variação positiva: aceleração compradora." : ind.roc12 < -1.5 ? "Taxa de variação negativa: aceleração vendedora." : "Momentum de 12 sessões praticamente nulo." });
+
+  // Aroon 25
+  const ap = Math.min(25, n);
+  const hw = highsArr.slice(-ap), lw = lowsArr.slice(-ap);
+  const idxH = hw.lastIndexOf(Math.max(...hw)), idxL = lw.lastIndexOf(Math.min(...lw));
+  const aroonUp = ((ap - 1 - idxH) >= 0 ? (idxH + 1) / ap : 0) * 100;
+  const aroonDown = ((idxL + 1) / ap) * 100;
+  add({ id: "aroon", group: "Tendência", name: "Aroon (25)", value: `${aroonUp.toFixed(0)} / ${aroonDown.toFixed(0)}`, bias: clamp((aroonUp - aroonDown) * 0.6), weight: 0.45, detail: aroonUp > 70 && aroonDown < 30 ? "Aroon Up dominante: máximos recentes, tendência de alta jovem e forte." : aroonDown > 70 && aroonUp < 30 ? "Aroon Down dominante: mínimos recentes, tendência de baixa ativa." : "Aroon sem dominância clara." });
+
+  // Fibonacci 60 sessões
+  const fw = candles.slice(-60);
+  const fibHigh = Math.max(...fw.map((c) => c.h)), fibLow = Math.min(...fw.map((c) => c.l));
+  const fibRange = fibHigh - fibLow || 1;
+  const fibLevels = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1].map((r) => ({ label: `${(r * 100).toFixed(1)}%`, price: Math.round((fibHigh - fibRange * r) * 100) / 100 }));
+  const nearestFib = fibLevels.reduce((b, l) => (Math.abs(l.price - price) < Math.abs(b.price - price) ? l : b), fibLevels[0]);
+  const fibPos = (fibHigh - price) / fibRange;
+  add({ id: "fib", group: "Padrões", name: "Retração de Fibonacci (60s)", value: nearestFib.label, bias: clamp((0.5 - fibPos) * 60), weight: 0.35, detail: `Preço na retração ${(fibPos * 100).toFixed(0)}% do swing ${fmt(fibLow)}→${fmt(fibHigh)}; nível mais próximo ${nearestFib.label} (${fmt(nearestFib.price)}).` });
+
+  // Divergência RSI (20 sessões)
+  let rsiDiv: string | null = null;
+  if (n >= 25) {
+    const c0 = closes[n - 21], c1 = closes[n - 1];
+    const q0 = r14[n - 21], q1 = r14[n - 1];
+    if (q0 != null && q1 != null) {
+      if (c1 < c0 && q1 > q0) rsiDiv = "Divergência altista: preço faz mínimo mais baixo e RSI mínimo mais alto.";
+      if (c1 > c0 && q1 < q0) rsiDiv = "Divergência baixista: preço faz máximo mais alto e RSI máximo mais baixo.";
+    }
+  }
+  if (rsiDiv) add({ id: "rsidiv", group: "Momento", name: "Divergência RSI", value: rsiDiv.startsWith("Divergência altista") ? "Altista" : "Baixista", bias: rsiDiv.startsWith("Divergência altista") ? 40 : -40, weight: 0.6, detail: rsiDiv });
+
+  // Notícias (sentimento das manchetes)
+  if (info.news && info.news.count > 0) {
+    add({ id: "news", group: "Notícias", name: "Sentimento das notícias", value: `${info.news.score > 0 ? "+" : ""}${info.news.score}`, bias: clamp(info.news.score * 0.8), weight: 0.6, detail: `${info.news.label}: ${info.news.positive} manchetes positivas, ${info.news.negative} negativas em ${info.news.count} notícias recentes (ponderadas por recência).` });
+  }
+
+  const extra: ExtraIndicators = {
+    ichimoku: { tenkan, kijun, spanA, spanB, position: ichiPos, tkCross },
+    parabolicSar: { value: sar, signal: sarSignal },
+    vwap20: { value: vwap20, position: price >= vwap20 ? "Acima do VWAP" : "Abaixo do VWAP" },
+    fibonacci: { high: fibHigh, low: fibLow, levels: fibLevels, nearest: nearestFib.label },
+    aroon: { up: aroonUp, down: aroonDown },
+    goldenCross: gc,
+    deathCross: dc,
+    rsiDivergence: rsiDiv,
+    bullishSignals: signals.filter((x) => x.bias > 10).length,
+    bearishSignals: signals.filter((x) => x.bias < -10).length,
+  };
+
   // ---------------- PONTUAÇÃO ----------------
   let weighted = 0;
   let totalWeight = 0;
@@ -712,9 +837,9 @@ export function analyzeStock(
   const verdictEmoji = verdict === "SUBIR" ? "▲" : verdict === "DESCER" ? "▼" : "◆";
 
   // ---------------- HORIZONTES ----------------
-  const shortScore = scoreOf(signals, ["rsi14", "stoch", "cci", "volume", "patterns", "percentB", "williams"]);
-  const midScore = scoreOf(signals, ["macd", "sma50", "sma20x50", "adx", "slope60", "obv", "mfi", "range52"]);
-  const longScore = scoreOf(signals, ["sma200", "slope60", "adx", "range52", "obv"]);
+  const shortScore = scoreOf(signals, ["rsi14", "stoch", "cci", "volume", "patterns", "percentB", "williams", "roc12", "ema921", "vwap", "news", "rsidiv"]);
+  const midScore = scoreOf(signals, ["macd", "sma50", "sma20x50", "adx", "slope60", "obv", "mfi", "range52", "ichimoku", "psar", "aroon", "fib", "news"]);
+  const longScore = scoreOf(signals, ["sma200", "slope60", "adx", "range52", "obv", "ichimoku", "cross"]);
   const timeframes = [
     { label: "Curto prazo (1–4 semanas)", score: Math.round(shortScore * 10) / 10, verdict: verdictFor(shortScore) },
     { label: "Médio prazo (1–6 meses)", score: Math.round(midScore * 10) / 10, verdict: verdictFor(midScore) },
@@ -813,6 +938,8 @@ export function analyzeStock(
     timeframes,
     signals: signals.sort((a, b) => b.weight * Math.abs(b.bias) - a.weight * Math.abs(a.bias)),
     indicators: ind,
+    extra,
+    news: info.news ?? null,
     performance: {
       d1: pctChange(closes, 1),
       w1: pctChange(closes, 5),
@@ -924,7 +1051,7 @@ export function analyzeFromScanner(
     metaName?: string | null;
     metaExchange?: string | null;
   },
-  info: { name?: string; exchange?: string; market?: string; sector?: string } = {},
+  info: { name?: string; exchange?: string; market?: string; sector?: string; news?: NewsInput } = {},
 ): StockAnalysis | null {
   const s = md.scanner;
   if (!s) return null;
@@ -1171,6 +1298,9 @@ export function analyzeFromScanner(
   };
 
   // -------- pontuação --------
+  if (info.news && info.news.count > 0) {
+    add({ id: "news", group: "Notícias", name: "Sentimento das notícias", value: `${info.news.score > 0 ? "+" : ""}${info.news.score}`, bias: clamp(info.news.score * 0.8), weight: 0.6, detail: `${info.news.label}: ${info.news.positive} manchetes positivas, ${info.news.negative} negativas em ${info.news.count} notícias recentes.` });
+  }
   let w = 0; let tw = 0; let agree = 0;
   for (const sg of signals) { w += sg.bias * sg.weight; tw += sg.weight; }
   const raw = tw ? w / tw : 0;
@@ -1282,6 +1412,8 @@ export function analyzeFromScanner(
     timeframes,
     signals: signals.sort((a, b) => b.weight * Math.abs(b.bias) - a.weight * Math.abs(a.bias)),
     indicators: ind,
+    extra: { ichimoku: null, parabolicSar: null, vwap20: null, fibonacci: null, aroon: null, goldenCross: false, deathCross: false, rsiDivergence: null, bullishSignals: signals.filter((x) => x.bias > 10).length, bearishSignals: signals.filter((x) => x.bias < -10).length },
+    news: info.news ?? null,
     performance: perfM,
     levels,
     patterns,

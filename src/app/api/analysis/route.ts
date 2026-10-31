@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { analyzeFromScanner, analyzeStock } from "@/lib/engine";
 import { COUNTRY_CURRENCY, getMarketData } from "@/lib/market-data";
 import { ensureSeeded, getTicker, saveAnalysis } from "@/lib/universe";
+import { fetchStockNews } from "@/lib/news";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -40,11 +41,23 @@ export async function GET(req: Request) {
     );
   }
 
+  // Notícias associadas à ação (Yahoo Finance + Google Notícias) com sentimento
+  let newsSummary: Awaited<ReturnType<typeof fetchStockNews>> | null = null;
+  try {
+    newsSummary = await fetchStockNews(target, info?.name ?? undefined);
+  } catch {
+    newsSummary = null;
+  }
+  const newsInput = newsSummary && newsSummary.items.length
+    ? { score: newsSummary.score, label: newsSummary.label, positive: newsSummary.positive, negative: newsSummary.negative, count: newsSummary.items.length }
+    : null;
+
   const meta = {
     name: info?.name ?? undefined,
     exchange: info?.exchange ?? undefined,
     market: info?.market ?? undefined,
     sector: info?.sector ?? undefined,
+    news: newsInput,
   };
 
   const analysis = md.candles && md.candles.length >= 40 && md.bundle
@@ -95,5 +108,5 @@ export async function GET(req: Request) {
     },
   });
 
-  return NextResponse.json({ analysis, warnings, source: md.source, historySource: md.historySource });
+  return NextResponse.json({ analysis, warnings, source: md.source, historySource: md.historySource, newsItems: newsSummary?.items ?? [], newsSummary: newsSummary ? { score: newsSummary.score, label: newsSummary.label, positive: newsSummary.positive, negative: newsSummary.negative, neutral: newsSummary.neutral, scoreImpact: newsSummary.scoreImpact } : null });
 }
