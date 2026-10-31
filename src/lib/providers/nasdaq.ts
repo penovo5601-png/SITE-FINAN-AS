@@ -53,8 +53,8 @@ export async function fetchNasdaqHistory(symbol: string, years = 3): Promise<Can
           const h = cleanNum(r.high);
           const l = cleanNum(r.low);
           const v = cleanNum(r.volume);
-          if (!c || !o || !h || !l) return null;
-          return { t, o, h: Math.max(h, o, c), l: Math.min(l, o, c), c, v };
+          if (!c || !o || !h || !l || h + 1e-8 < Math.max(o,c,l) || l - 1e-8 > Math.min(o,c,h)) return null;
+          return { t, o, h, l, c, v };
         })
         .filter((x): x is Candle => x !== null)
         .sort((a, b) => a.t - b.t);

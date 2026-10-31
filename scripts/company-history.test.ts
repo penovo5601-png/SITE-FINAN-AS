@@ -4,6 +4,7 @@ import {discountedCashFlow,grahamReference,valuationGap} from "../src/lib/intrin
 import {buildCompanyResearch,positiveCagr,pricePerformance} from "../src/lib/company-research";
 import {parseFinancialStatements,quoteUnit,type FinancialStatements,type FiscalYear} from "../src/lib/providers/financials";
 import {canonicalSymbol,validHistory,type HistorySnapshot} from "../src/lib/history-types";
+import {fetchNasdaqHistory} from "../src/lib/providers/nasdaq";
 import {getPriceHistory} from "../src/lib/price-history";
 import {bundledHistory} from "../src/lib/history-store";
 import type {Candle} from "../src/lib/yahoo";
@@ -29,3 +30,10 @@ test("Aliases corrigidos não removem a bolsa nem misturam tickers homónimos",(
 test("Falha total de rede recupera arquivo real sem avançar a data ou simular velas",async()=>{const original=globalThis.fetch;globalThis.fetch=async()=>{throw new Error("simulated provider outage")};try{const archived=bundledHistory("BCP.LS")!;const h=await getPriceHistory("BCP.LS",true);assert.ok(h);assert.equal(h.lastBarAt,archived.lastBarAt);assert.equal(h.candles.at(-1)?.c,archived.candles.at(-1)?.c);assert.ok(h.origin==="bundled"||h.origin==="postgres"||h.origin==="memory");assert.equal(await getPriceHistory("NO-SUCH-COMPANY.LS",true),null);}finally{globalThis.fetch=original;}});
 
 test("Denominador de ações divergente suspende DCF e Graham por ação",()=>{const c=company({total_shares_outstanding_fundamental:2});assert.equal(c.valuation.graham,null);assert.match(c.valuation.unavailableReason!,/ações divergente/);});
+
+test("Nasdaq exclui OHLC incoerente sem fabricar máximos ou mínimos",async()=>{
+ const original=globalThis.fetch;
+ const rows=Array.from({length:30},(_,i)=>({date:`01/${String(i+1).padStart(2,"0")}/2025`,open:i===14?"$150":"$100",high:"$102",low:"$99",close:"$101",volume:"1,000"}));
+ globalThis.fetch=async()=>new Response(JSON.stringify({data:{tradesTable:{rows}}}),{status:200,headers:{"Content-Type":"application/json"}});
+ try{const data=await fetchNasdaqHistory("CHECK-NASDAQ-QUALITY",3);assert.equal(data?.length,29);assert.equal(data?.some(c=>c.o===150||c.h===150),false);}finally{globalThis.fetch=original;}
+});
