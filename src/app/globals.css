@@ -1,0 +1,88 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: var(--font-space), "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jb), "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --color-ink-950: #05070c;
+  --color-ink-900: #090d16;
+  --color-ink-850: #0d1220;
+  --color-ink-800: #121829;
+  --color-ink-700: #1b2338;
+  --color-ink-600: #27314b;
+  --color-ink-500: #3a4667;
+  --color-ink-400: #64748b;
+  --color-ink-300: #94a3b8;
+  --color-ink-200: #cbd5e1;
+  --color-ink-100: #e8edf6;
+
+  --color-bull-300: #6ee7a8;
+  --color-bull-400: #34d683;
+  --color-bull-500: #12b76a;
+  --color-bull-600: #0a8f52;
+  --color-bear-300: #fda4a4;
+  --color-bear-400: #fb7185;
+  --color-bear-500: #ef4056;
+  --color-bear-600: #c62a3d;
+  --color-amber-signal: #f5a524;
+  --color-cyan-signal: #38bdf8;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--color-ink-950);
+  color: var(--color-ink-100);
+  font-family: var(--font-display);
+  background-image:
+    radial-gradient(900px 500px at 12% -8%, rgba(18, 183, 106, 0.14), transparent 60%),
+    radial-gradient(760px 460px at 92% 4%, rgba(56, 189, 248, 0.12), transparent 62%),
+    radial-gradient(700px 520px at 50% 108%, rgba(239, 64, 86, 0.09), transparent 60%);
+  background-attachment: fixed;
+}
+
+::selection {
+  background: rgba(18, 183, 106, 0.35);
+}
+
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: var(--color-ink-900); }
+*::-webkit-scrollbar-thumb { background: var(--color-ink-700); border-radius: 8px; }
+*::-webkit-scrollbar-thumb:hover { background: var(--color-ink-600); }
+
+.tnum { font-variant-numeric: tabular-nums; font-family: var(--font-mono); }
+
+.panel {
+  background: linear-gradient(180deg, rgba(18, 24, 41, 0.92), rgba(9, 13, 22, 0.92));
+  border: 1px solid rgba(39, 49, 75, 0.85);
+  border-radius: 14px;
+  backdrop-filter: blur(6px);
+}
+
+.grid-lines {
+  background-image:
+    linear-gradient(rgba(39, 49, 75, 0.32) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(39, 49, 75, 0.32) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.82); }
+}
+.live-dot { animation: pulse-dot 1.8s ease-in-out infinite; }
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.rise { animation: rise 0.35s ease-out both; }
+
+@keyframes ticker-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.ticker-tape { animation: ticker-scroll 60s linear infinite; }
+.ticker-tape:hover { animation-play-state: paused; }

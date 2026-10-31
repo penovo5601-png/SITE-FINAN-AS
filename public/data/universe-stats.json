@@ -1,0 +1,142 @@
+{
+  "total": 61589,
+  "markets": [
+    {
+      "market": "Germany",
+      "count": 16901
+    },
+    {
+      "market": "Austria",
+      "count": 8798
+    },
+    {
+      "market": "United States",
+      "count": 7664
+    },
+    {
+      "market": "China",
+      "count": 3429
+    },
+    {
+      "market": "India",
+      "count": 2975
+    },
+    {
+      "market": "Brazil",
+      "count": 2756
+    },
+    {
+      "market": "Japan",
+      "count": 2661
+    },
+    {
+      "market": "United Kingdom",
+      "count": 2641
+    },
+    {
+      "market": "Italy",
+      "count": 2238
+    },
+    {
+      "market": "France",
+      "count": 2043
+    },
+    {
+      "market": "Australia",
+      "count": 1608
+    },
+    {
+      "market": "Hong Kong",
+      "count": 1424
+    },
+    {
+      "market": "Sweden",
+      "count": 1092
+    },
+    {
+      "market": "Norway",
+      "count": 980
+    },
+    {
+      "market": "Canada",
+      "count": 771
+    },
+    {
+      "market": "Taiwan",
+      "count": 664
+    },
+    {
+      "market": "Denmark",
+      "count": 637
+    },
+    {
+      "market": "South Korea",
+      "count": 545
+    },
+    {
+      "market": "Argentina",
+      "count": 432
+    },
+    {
+      "market": "South Africa",
+      "count": 333
+    },
+    {
+      "market": "Russia",
+      "count": 236
+    },
+    {
+      "market": "Saudi Arabia",
+      "count": 147
+    },
+    {
+      "market": "Switzerland",
+      "count": 133
+    },
+    {
+      "market": "New Zealand",
+      "count": 133
+    },
+    {
+      "market": "Spain",
+      "count": 105
+    },
+    {
+      "market": "Netherlands",
+      "count": 44
+    },
+    {
+      "market": "UAE",
+      "count": 38
+    },
+    {
+      "market": "Singapore",
+      "count": 35
+    },
+    {
+      "market": "Portugal",
+      "count": 31
+    },
+    {
+      "market": "Finland",
+      "count": 25
+    },
+    {
+      "market": "Greece",
+      "count": 25
+    },
+    {
+      "market": "Poland",
+      "count": 20
+    },
+    {
+      "market": "Belgium",
+      "count": 15
+    },
+    {
+      "market": "Mexico",
+      "count": 10
+    }
+  ],
+  "generatedAt": "2026-10-31T08:52:00.288Z"
+}

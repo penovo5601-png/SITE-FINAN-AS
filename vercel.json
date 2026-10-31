@@ -1,0 +1,8 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "installCommand": "npm install",
+  "buildCommand": "(npx drizzle-kit push --force || echo 'BD indisponível: a continuar sem ela') && (node scripts/seed-db.mjs || echo 'Seed ignorado') && next build",
+  "regions": ["lhr1"],
+  "git": { "deploymentEnabled": true }
+}
