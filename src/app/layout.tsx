@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import Nav, { type NavVariant } from "@/components/Nav";
+import { getSiteMode } from "@/lib/site-mode";
 
 const space = Space_Grotesk({
   subsets: ["latin"],
@@ -18,10 +19,8 @@ const jb = JetBrains_Mono({
   display: "swap",
 });
 
-export const siteMode: "main" | "chart" = process.env.SITE_MODE === "chart" ? "chart" : "main";
-
 export async function generateMetadata(): Promise<Metadata> {
-  if (siteMode === "chart") {
+  if (getSiteMode() === "chart") {
     return {
       title: "ChartLens — Envia a foto do gráfico e recebe a expectativa (sobe ou desce)",
       description:
@@ -36,7 +35,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default function RootLayout({ children }: { children: ReactNode }) {
-  const variant: NavVariant = siteMode === "chart" ? "chart" : "main";
+  const variant: NavVariant = getSiteMode() === "chart" ? "chart" : "main";
   return (
     <html lang="pt" className={`${space.variable} ${jb.variable}`}>
       <body className="min-h-screen antialiased">

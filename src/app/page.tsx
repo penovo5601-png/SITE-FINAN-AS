@@ -1,14 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { countTickers, ensureSeeded, featuredTickers, marketStats, recentAnalyses } from "@/lib/universe";
+import { getSiteMode } from "@/lib/site-mode";
 import SearchBox from "@/components/SearchBox";
 import { VerdictBadge, type Verdict } from "@/components/ui";
 import TickerTape from "@/components/TickerTape";
 
 export const dynamic = "force-dynamic";
-
-/** No modo "chart" (site ChartLens) a entrada é diretamente o analisador de fotografias. */
-const SITE_MODE = process.env.SITE_MODE ?? "main";
 
 const FLAGS: Record<string, string> = {
   PT: "🇵🇹", ES: "🇪🇸", FR: "🇫🇷", DE: "🇩🇪", IT: "🇮🇹", NL: "🇳🇱", BE: "🇧🇪",
@@ -19,7 +17,7 @@ const FLAGS: Record<string, string> = {
 };
 
 export default async function Home() {
-  if (SITE_MODE === "chart") redirect("/grafico");
+  if (getSiteMode() === "chart") redirect("/grafico");
   await ensureSeeded();
   const [total, markets, featured, recent] = await Promise.all([
     countTickers(),
