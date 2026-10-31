@@ -3,7 +3,7 @@ import { desc } from "drizzle-orm";
 import { db } from "@/db";
 import { chartReports } from "@/db/schema";
 import { analyzeChartImage } from "@/lib/chart-image";
-import { analyzeFromScanner, analyzeStock } from "@/lib/engine";
+import { analyzeMarket } from "@/lib/analyze-market";
 import { COUNTRY_CURRENCY, getMarketData } from "@/lib/market-data";
 import { ensureSeeded, getTicker, isDbAvailable } from "@/lib/universe";
 
@@ -82,21 +82,7 @@ export async function POST(req: Request) {
       market: info?.market ?? undefined,
       sector: info?.sector ?? "",
     };
-    const a =
-      md.candles && md.candles.length >= 40 && bundle
-        ? analyzeStock(bundle, { ...metaInfo, scanner: md.scanner, historySource: md.historySource, sourceNotes: md.notes })
-        : analyzeFromScanner(
-            {
-              symbol: md.symbol,
-              scanner: md.scanner,
-              currency: md.currency,
-              range: "2y",
-              interval: "1d",
-              historySource: md.historySource,
-              notes: md.notes,
-            },
-            metaInfo,
-          );
+    const a = analyzeMarket(md, metaInfo);
     if (a) {
       live = {
         symbol: a.symbol,
@@ -149,7 +135,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    await db.insert(chartReports).values({
+    if (isDbAvailable()) await db.insert(chartReports).values({
       symbol: live?.symbol ?? symbolRaw ?? null,
       name: live?.name ?? null,
       fileName: file.name || null,

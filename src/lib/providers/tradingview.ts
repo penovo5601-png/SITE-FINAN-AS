@@ -17,6 +17,7 @@ export const TV_COLUMNS = [
   "Pivot.M.Classic.S1", "Pivot.M.Classic.R1", "Pivot.M.Classic.S2", "Pivot.M.Classic.R2",
   "Pivot.M.Classic.S3", "Pivot.M.Classic.R3",
   "RSI|1W", "ADX|1W", "Recommend.All|1W", "RSI|1M", "Recommend.All|1M",
+  "ADX+DI", "ADX-DI", "Ichimoku.BLine", "VWMA", "HullMA9", "Stoch.RSI.K", "Stoch.RSI.D", "UO", "BBPower",
 ] as const;
 
 export type TvSnapshot = Record<string, number | string | null>;
@@ -45,7 +46,8 @@ export function baseTicker(symbol: string) {
 }
 
 export function candidatesFor(symbol: string): string[] {
-  const { base, suffix } = baseTicker(symbol);
+  const canonical: Record<string, string> = { "GAL.LS": "GALP.LS", "MCP.LS": "EGL.LS" };
+  const { base, suffix } = baseTicker(canonical[symbol] ?? symbol);
   const known = resolutionCache.get(symbol);
   if (known) return [known];
   const ex = SUFFIX_TO_TV[suffix];

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { analyzeFromScanner, analyzeStock } from "@/lib/engine";
+import { analyzeMarket, RESEARCH_VERSION } from "@/lib/analyze-market";
 import { COUNTRY_CURRENCY, getMarketData } from "@/lib/market-data";
 import { ensureSeeded, getTicker, saveAnalysis } from "@/lib/universe";
 
@@ -40,6 +40,11 @@ export async function GET(req: Request) {
     );
   }
 
+  const instrument = String(md.scanner?.type ?? md.meta?.instrumentType ?? "EQUITY").toUpperCase();
+  if (!["EQUITY", "STOCK", "DR"].includes(instrument)) {
+    return NextResponse.json({ error: "Esta plataforma analisa exclusivamente ações; este símbolo não é uma ação." }, { status: 400 });
+  }
+
   const meta = {
     name: info?.name ?? undefined,
     exchange: info?.exchange ?? undefined,
@@ -47,20 +52,7 @@ export async function GET(req: Request) {
     sector: info?.sector ?? undefined,
   };
 
-  const analysis = md.candles && md.candles.length >= 40 && md.bundle
-    ? analyzeStock(md.bundle, { ...meta, scanner: md.scanner, historySource: md.historySource, sourceNotes: md.notes })
-    : analyzeFromScanner(
-        {
-          symbol: md.symbol,
-          scanner: md.scanner,
-          currency: md.currency,
-          range,
-          interval,
-          historySource: md.historySource,
-          notes: md.notes,
-        },
-        meta,
-      );
+  const analysis = analyzeMarket(md, meta);
 
   if (!analysis) {
     return NextResponse.json({ error: `Sem dados suficientes para analisar "${symbol}".`, symbol }, { status: 404 });
@@ -90,10 +82,12 @@ export async function GET(req: Request) {
       macdHist: analysis.indicators.macdHist,
       hasHistory: analysis.hasHistory,
       historySource: analysis.historySource,
+      confluence: analysis.confluence,
+      version: RESEARCH_VERSION,
       range,
       interval,
     },
   });
 
-  return NextResponse.json({ analysis, warnings, source: md.source, historySource: md.historySource });
+  return NextResponse.json({ analysis, warnings, source: md.source, historySource: md.historySource, version: RESEARCH_VERSION });
 }

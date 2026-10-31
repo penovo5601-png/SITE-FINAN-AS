@@ -1,3 +1,4 @@
+import { RESEARCH_VERSION } from "@/lib/analyze-market";
 import { NextResponse } from "next/server";
 import { sql } from "drizzle-orm";
 import { db } from "@/db";
@@ -23,6 +24,7 @@ export async function GET() {
   return NextResponse.json(
     {
       ok,
+      version: RESEARCH_VERSION,
       database: database ? "postgresql" : "índice em memória",
       tickersDisponiveis: memory,
     },

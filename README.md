@@ -66,3 +66,26 @@ Para os dois sites, cria dois projetos Vercel a partir do mesmo repositório e d
 
 Leituras geradas automaticamente a partir de indicadores técnicos sobre dados diferidos.
 Não constituem recomendação de investimento. O capital está em risco.
+
+
+## Atualização 2.0 — confluência e notícias por ação
+
+A pontuação agora cruza famílias (tendência 36%, momento 28%, volume 18%,
+volatilidade 10%, padrões 8%) e não uma soma indiscriminada de médias correlacionadas.
+Consensos agregados do TradingView não recebem um segundo voto. Inclui VWMA,
+Hull MA, Ichimoku com deslocamento sem look-ahead, Supertrend, Stochastic RSI,
+Ultimate Oscillator, Chaikin Money Flow, Donchian, Keltner, Aroon, Elder Ray, Parabolic SAR, VWAP móvel, Fibonacci e divergências RSI confirmadas.
+Indicadores sem dados suficientes aparecem como indisponíveis e não são inventados.
+
+Cada ação abre automaticamente um painel de notícias com títulos, publicadores,
+datas e links. Fontes: RSS público Yahoo Finance e Google News, com cache de dez
+minutos, atualização periódica, filtro por idioma, deduplicação e tratamento de
+indisponibilidade. Notícias são contexto, não ordens de compra/venda automáticas.
+
+Os percentuais de viés e confiança são heurísticos (convergência e cobertura),
+não probabilidades calibradas nem taxas de acerto. A previsão pode falhar.
+
+- `GET /api/news?symbol=BCP.LS` — manchetes e estado das fontes.
+- `GET /api/analysis?symbol=AAPL` — análise com `confluence` e versão.
+- `GET /api/health` — inclui a versão implantada.
+- Testes: `node --import tsx --test scripts/research.test.ts`.

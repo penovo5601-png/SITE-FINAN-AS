@@ -1,4 +1,5 @@
 import type { Candle, ChartBundle } from "./yahoo";
+import type { ConfluenceReport } from "./confluence";
 import {
   adx,
   annualizedVolatility,
@@ -149,6 +150,7 @@ export type Fundamentals = {
 };
 
 export type StockAnalysis = {
+  confluence?: ConfluenceReport;
   hasHistory: boolean;
   historySource: string;
   sourceNotes: string[];
@@ -330,7 +332,7 @@ export function analyzeStock(
 
   const s20 = sma(closes, 20);
   const s50 = sma(closes, 50);
-  const s200 = sma(closes, Math.min(200, n));
+  const s200 = sma(closes, 200);
   const e9 = ema(closes, 9);
   const e21 = ema(closes, 21);
   const r14 = rsi(closes, 14);
@@ -488,7 +490,7 @@ export function analyzeStock(
   if (ind.macd != null && ind.macdSignal != null) {
     const bull = ind.macd > ind.macdSignal;
     const histRising = (last(macdRes.hist, 0) ?? 0) > (last(macdRes.hist, 1) ?? 0);
-    const bias = (bull ? 45 : -45) + (histRising ? (bull ? 15 : -15) : 0);
+    const bias = (bull ? 45 : -45) + (histRising ? 15 : -15);
     add({
       id: "macd",
       group: "Momento",

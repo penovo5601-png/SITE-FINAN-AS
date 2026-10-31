@@ -32,7 +32,7 @@ export async function fetchNasdaqHistory(symbol: string, years = 3): Promise<Can
           Origin: "https://www.nasdaq.com",
           Referer: "https://www.nasdaq.com/",
         },
-        signal: AbortSignal.timeout(18000),
+        signal: AbortSignal.timeout(11000),
         cache: "no-store",
       });
       if (!res.ok) continue;

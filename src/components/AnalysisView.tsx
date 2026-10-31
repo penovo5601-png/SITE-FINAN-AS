@@ -5,6 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import type { StockAnalysis } from "@/lib/engine";
 import CandleChart from "./CandleChart";
+import ConfluencePanel from "./ConfluencePanel";
+import StockNews from "./StockNews";
 import { Meter, ScoreDial, SectionTitle, Stat, VerdictBadge, type Verdict } from "./ui";
 
 const RANGES = [
@@ -56,13 +58,15 @@ export default function AnalysisView() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (signal?: AbortSignal) => {
     if (!symbol) return;
     setLoading(true);
+    setData(null);
     setError(null);
     try {
-      const res = await fetch(`/api/analysis?symbol=${encodeURIComponent(symbol)}&range=${range}&interval=${interval}`);
+      const res = await fetch(`/api/analysis?symbol=${encodeURIComponent(symbol)}&range=${range}&interval=${interval}`, { signal });
       const json = await res.json();
+      if (signal?.aborted) return;
       if (!res.ok || !json.analysis) {
         setError(json.error ?? "Não foi possível obter a análise.");
         setData(null);
@@ -71,30 +75,36 @@ export default function AnalysisView() {
         setWarnings(json.warnings ?? []);
       }
     } catch (e) {
-      setError(String(e));
+      if (!signal?.aborted) setError(String(e));
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
   }, [symbol, range, interval]);
 
   useEffect(() => {
-    void load();
+    const controller = new AbortController();
+    void load(controller.signal);
+    return () => controller.abort();
   }, [load]);
 
   if (loading && !data) {
     return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
+      <>
+      <div className="flex min-h-[30vh] flex-col items-center justify-center gap-4">
         <div className="h-10 w-10 animate-spin rounded-full border-2 border-ink-700 border-t-bull-400" />
         <p className="tnum text-[13px] text-ink-400">
-          A descarregar histórico e a calcular 25+ indicadores para {symbol}…
+          A cruzar indicadores por famílias e a procurar notícias de {symbol}…
         </p>
       </div>
+      <StockNews key={symbol} symbol={symbol} />
+      </>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="mx-auto max-w-2xl py-20 text-center">
+      <div className="space-y-5">
+        <div className="mx-auto max-w-2xl py-12 text-center">
         <div className="panel p-8">
           <div className="mx-auto grid h-12 w-12 place-items-center rounded-xl border border-bear-500/40 bg-bear-500/10 text-xl text-bear-400">!</div>
           <h1 className="mt-4 text-xl font-bold text-ink-100">Sem dados para {symbol}</h1>
@@ -108,6 +118,8 @@ export default function AnalysisView() {
             </Link>
           </div>
         </div>
+        </div>
+        <StockNews key={symbol} symbol={symbol} />
       </div>
     );
   }
@@ -131,7 +143,7 @@ export default function AnalysisView() {
             <span className="text-ink-700">·</span>
             <span>{a.currency}</span>
             <span className="text-ink-700">·</span>
-            <span>{a.bars} sessões analisadas</span>
+            <span>{a.confluence?.observations ?? a.bars} barras observadas · {a.signals.length} sinais</span>
           </p>
         </div>
         <div className="text-right">
@@ -159,7 +171,7 @@ export default function AnalysisView() {
           <ScoreDial score={a.score} confidence={a.confidence} verdict={a.verdict as Verdict} />
           <div className="w-full">
             <div className="mb-1.5 flex justify-between text-[11px] uppercase tracking-wider text-ink-500">
-              <span>probabilidade de subida</span>
+              <span>viés de subida · estimativa</span>
               <span className="tnum font-bold text-ink-200">{a.probabilityUp}%</span>
             </div>
             <div className="relative h-2.5 overflow-hidden rounded-full bg-ink-800">
@@ -170,7 +182,8 @@ export default function AnalysisView() {
               <div className="absolute inset-y-0 w-0.5 bg-ink-100/70" style={{ left: "50%" }} />
             </div>
             <p className="mt-3 text-center text-[11px] text-ink-500">
-              horizonte de referência: <span className="font-semibold text-ink-300">{a.horizon}</span>
+              Estimativa heurística, não probabilidade calibrada. Confiança indica convergência dos sinais.
+              <br />Horizonte de referência: <span className="font-semibold text-ink-300">{a.horizon}</span>
             </p>
           </div>
         </div>
@@ -204,6 +217,9 @@ export default function AnalysisView() {
         </div>
       </div>
 
+      <ConfluencePanel report={a.confluence} />
+      <StockNews key={symbol} symbol={symbol} />
+
       {/* ---------------- GRÁFICO ---------------- */}
         <div className="panel p-5">
         {!a.hasHistory && (
@@ -212,7 +228,7 @@ export default function AnalysisView() {
               Gráfico indisponível nesta consulta — o fornecedor de velas está a limitar pedidos.
             </p>
             <p className="mt-1 text-[12px] leading-relaxed text-ink-300">
-              A análise abaixo é igualmente completa: foi construída com {a.signals.length} indicadores calculados pelo
+              A análise fica limitada aos indicadores que a fonte disponibilizou: foi construída com {a.signals.length} indicadores calculados pelo
               scanner TradingView (RSI, ADX, médias 10/20/30/50/100/200, MACD, Bollinger, Estocástico, CCI, Williams %R,
               ATR, volume relativo, pivôs e performance). Carrega em “Recalcular” para tentar novamente o histórico de velas.
             </p>

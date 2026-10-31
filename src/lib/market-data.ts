@@ -62,6 +62,8 @@ export async function getMarketData(
   currencyHint?: string | null,
 ): Promise<MarketData> {
   const notes: string[] = [];
+  const aliases: Record<string, string> = { "GAL.LS": "GALP.LS", "MCP.LS": "EGL.LS" };
+  symbol = aliases[symbol] ?? symbol;
   const { base, suffix } = baseTicker(symbol);
   const isUs = !suffix;
 
@@ -82,14 +84,7 @@ export async function getMarketData(
         notes.push("Histórico obtido no Nasdaq.com (o fornecedor global estava indisponível).");
       }
     }
-    if (!candles || candles.length < 40) {
-      const anyUs = await fetchNasdaqHistory(base, RANGE_YEARS[range] ?? 3);
-      if (anyUs && anyUs.length > 40 && !isUs) {
-        candles = anyUs;
-        historySource = "nasdaq";
-        notes.push(`Histórico obtido para o ticker base "${base}" no Nasdaq.com.`);
-      }
-    }
+    // Nunca retirar o sufixo de uma ação estrangeira para procurar um homónimo americano.
   }
 
   if (candles) {

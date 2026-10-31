@@ -1,20 +1,20 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { JetBrains_Mono, Space_Grotesk } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import Nav, { type NavVariant } from "@/components/Nav";
 import { getSiteMode } from "@/lib/site-mode";
 
-const space = Space_Grotesk({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+const space = localFont({
+  src: "./fonts/SpaceGrotesk-Latin.woff2",
+  weight: "300 700",
   variable: "--font-space",
   display: "swap",
 });
 
-const jb = JetBrains_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500", "700"],
+const jb = localFont({
+  src: "./fonts/JetBrainsMono-Latin.woff2",
+  weight: "100 800",
   variable: "--font-jb",
   display: "swap",
 });

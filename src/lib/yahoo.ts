@@ -85,7 +85,7 @@ export async function fetchChart(
     try {
       const res = await fetch(url(host), {
         headers: { "User-Agent": UA, Accept: "application/json" },
-        signal: AbortSignal.timeout(15000),
+        signal: AbortSignal.timeout(8000),
         cache: "no-store",
       });
       if (!res.ok) continue;
@@ -108,7 +108,7 @@ export async function fetchChart(
         fullExchangeName: String(m.fullExchangeName ?? m.exchangeName ?? ""),
         instrumentType: String(m.instrumentType ?? "EQUITY"),
         regularMarketPrice: Number(m.regularMarketPrice ?? candles[candles.length - 1].c),
-        previousClose: Number(m.chartPreviousClose ?? m.previousClose ?? candles[candles.length - 2]?.c ?? 0),
+        previousClose: Number(m.previousClose ?? candles[candles.length - 2]?.c ?? candles[candles.length - 1]?.c ?? 0),
         regularMarketTime: Number(m.regularMarketTime ?? candles[candles.length - 1].t / 1000),
         fiftyTwoWeekHigh: m.fiftyTwoWeekHigh ? Number(m.fiftyTwoWeekHigh) : undefined,
         fiftyTwoWeekLow: m.fiftyTwoWeekLow ? Number(m.fiftyTwoWeekLow) : undefined,
