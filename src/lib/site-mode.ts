@@ -8,21 +8,18 @@ let cached: SiteMode | null = null;
 /**
  * Decide que site estamos a servir.
  *
- * Ordem de precedência:
- *  1. variável de ambiente SITE_MODE (Vercel/painel) — opcional
- *  2. ficheiro site.config.json commitado no repositório
+ * Ordem de precedência (deliberada):
+ *  1. ficheiro `site.config.json` commitado no repositório  ← MANDA ELE
+ *  2. variável de ambiente SITE_MODE                        ← apenas fallback
  *  3. "main"
  *
- * Isto permite ter dois repositórios/deployments com o MESMO código e
- * zero configuração no painel: basta o site.config.json de cada um.
+ * O ficheiro do repositório tem prioridade de propósito: assim uma variável
+ * de ambiente definida no projeto errado da Vercel não consegue transformar o
+ * TickerLab (A) no ChartLens (B). Cada repositório decide o que é.
  */
 export function getSiteMode(): SiteMode {
   if (cached) return cached;
-  const env = process.env.SITE_MODE;
-  if (env === "chart" || env === "main") {
-    cached = env;
-    return cached;
-  }
+
   try {
     const file = path.join(process.cwd(), "site.config.json");
     if (existsSync(file)) {
@@ -33,8 +30,15 @@ export function getSiteMode(): SiteMode {
       }
     }
   } catch {
-    /* ficheiro ausente ou inválido — usa o valor por omissão */
+    /* ficheiro ausente ou inválido — cai no fallback abaixo */
   }
+
+  const env = process.env.SITE_MODE;
+  if (env === "chart" || env === "main") {
+    cached = env;
+    return cached;
+  }
+
   cached = "main";
   return cached;
 }
