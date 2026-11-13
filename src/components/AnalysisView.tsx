@@ -9,6 +9,7 @@ import CompanyResearchPanel from "./CompanyResearchPanel";
 import ConfluencePanel from "./ConfluencePanel";
 import StockNews from "./StockNews";
 import DecisionPanel from "./DecisionPanel";
+import GuidePanel from "./GuidePanel";
 import { Meter, ScoreDial, SectionTitle, Stat, VerdictBadge, type Verdict } from "./ui";
 
 const RANGES = [
@@ -220,6 +221,9 @@ export default function AnalysisView() {
       <CompanyResearchPanel key={a.symbol} report={a.company} price={a.price} />
       <StockNews key={symbol} symbol={symbol} />
       <DecisionPanel audit={a.decision} currency={a.currency} />
+
+      {/* ---------------- MÉTODO DO GUIA PRÁTICO ---------------- */}
+      <GuidePanel key={`guide-${a.symbol}`} symbol={a.symbol} />
       <ConfluencePanel report={a.confluence} />
 
       {/* ---------------- PLANO ---------------- */}

@@ -14,7 +14,7 @@ export const TV_COLUMNS = [
   "price_52_week_high", "price_52_week_low", "high_1M", "low_1M",
   "Recommend.All", "Recommend.MA", "Recommend.Other",
   "relative_volume_10d_calc", "average_volume_10d_calc", "market_cap_basic",
-  "price_earnings_ttm", "dividends_yield", "beta_1_year", "price_book_fq", "price_sales_fq",
+  "price_earnings_ttm", "dividends_yield", "beta_1_year", "price_book_fq", "price_sales_fq", "dividend_payout_ratio_ttm",
   "earnings_per_share_basic_ttm", "return_on_equity", "earnings_release_date",
   "Pivot.M.Classic.S1", "Pivot.M.Classic.R1", "Pivot.M.Classic.S2", "Pivot.M.Classic.R2",
   "Pivot.M.Classic.S3", "Pivot.M.Classic.R3",

@@ -7,12 +7,14 @@ import SearchBox from "./SearchBox";
 const LINKS_MAIN = [
   { href: "/", label: "Início" },
   { href: "/universo", label: "Universo de ações" },
+  { href: "/carteiras", label: "Carteiras 100k" },
   { href: "/grafico", label: "Analisar gráfico (foto)" },
 ];
 
 const LINKS_CHART = [
   { href: "/grafico", label: "Início · Analisar foto" },
   { href: "/universo", label: "Universo de ações" },
+  { href: "/carteiras", label: "Carteiras 100k" },
   { href: "/", label: "Avaliação de ações" },
 ];
 
