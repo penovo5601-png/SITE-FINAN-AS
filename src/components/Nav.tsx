@@ -7,12 +7,16 @@ import SearchBox from "./SearchBox";
 const LINKS_MAIN = [
   { href: "/", label: "Início" },
   { href: "/universo", label: "Universo de ações" },
+  { href: "/guia", label: "Guia & pares" },
+  { href: "/carteiras", label: "Carteiras até 100k" },
   { href: "/grafico", label: "Analisar gráfico (foto)" },
 ];
 
 const LINKS_CHART = [
   { href: "/grafico", label: "Início · Analisar foto" },
   { href: "/universo", label: "Universo de ações" },
+  { href: "/guia", label: "Guia & pares" },
+  { href: "/carteiras", label: "Carteiras até 100k" },
   { href: "/", label: "Avaliação de ações" },
 ];
 
@@ -55,7 +59,7 @@ export default function Nav({ variant = "main" }: { variant?: NavVariant }) {
           </span>
         </Link>
 
-        <nav className="order-3 flex w-full items-center gap-1 sm:order-2 sm:w-auto sm:flex-1">
+        <nav className="order-3 flex w-full flex-wrap items-center gap-1 sm:order-2 sm:w-auto sm:flex-1">
           {LINKS.map((l) => {
             const active = l.href === "/" ? pathname === "/" : pathname.startsWith(l.href);
             return (

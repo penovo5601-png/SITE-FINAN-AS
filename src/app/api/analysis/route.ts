@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { fetchFinancialStatements } from "@/lib/providers/financials";
+import { attachPracticalGuide } from "@/lib/guide-service";
 import { attachCompanyResearch } from "@/lib/company-service";
 import { fetchStockNews } from "@/lib/news";
 import { analyzeMarket, RESEARCH_VERSION } from "@/lib/analyze-market";
@@ -60,7 +61,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: `Sem dados suficientes para analisar "${symbol}".`, symbol }, { status: 404 });
   }
 
-  await attachCompanyResearch(analysis,md,statements);
+  await Promise.all([attachCompanyResearch(analysis,md,statements),attachPracticalGuide(analysis,md)]);
 
   const warnings: string[] = [...(analysis.sourceNotes ?? [])];
   if (!info) warnings.push(`"${symbol}" não consta do universo indexado; a análise usou apenas os dados dos fornecedores.`);
@@ -89,6 +90,7 @@ export async function GET(req: Request) {
       confluence: analysis.confluence,
       decision: analysis.decision,
       company: analysis.company,
+      guide: analysis.guide,
       version: RESEARCH_VERSION,
       range,
       interval,

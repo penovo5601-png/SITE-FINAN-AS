@@ -1,5 +1,6 @@
 import type { Candle, ChartBundle } from "./yahoo";
 import type { ConfluenceReport } from "./confluence";
+import type { GuideReport } from "./practical-guide";
 import type { CompanyResearch } from "./company-research";
 import type { HistoryEvidence } from "./history-types";
 import type { DecisionAudit } from "./decision-audit";
@@ -154,6 +155,7 @@ export type Fundamentals = {
 };
 
 export type StockAnalysis = {
+  guide?: GuideReport;
   company?: CompanyResearch;
   historyEvidence?: HistoryEvidence;
   chartCandles?: Candle[];

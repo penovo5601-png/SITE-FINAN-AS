@@ -136,3 +136,16 @@ uptime absoluto de fornecedores externos.
 
 Detalhes: [docs/COMPANY-AND-HISTORY.md](docs/COMPANY-AND-HISTORY.md).
 Testes: `node --import tsx --test scripts/research.test.ts scripts/rigor.test.ts scripts/company-history.test.ts`.
+
+
+## v5 — guia, concorrentes e carteiras só de ações
+
+Novos separadores `/guia` e `/carteiras`. Comparação por indústria dos cinco
+indicadores do guia, tendências com contactos/pivôs observados e semáforo separado
+do veredicto técnico existente. Carteiras até 100.000 €, 12 emitentes, ações inteiras,
+limites por setor/país/emitente, EUR/FX, custos, justificações, exportação e cenários
+por bootstrap conjunto com hipótese de retorno explícita. Não há ordens automáticas,
+ETF, crédito ou rendimentos garantidos.
+
+Método e limitações: [docs/GUIDE-PORTFOLIOS.md](docs/GUIDE-PORTFOLIOS.md).
+Testes: `node --import tsx --test scripts/guide-portfolios.test.ts`.

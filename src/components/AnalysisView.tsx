@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { StockAnalysis } from "@/lib/engine";
 import ResilientCandleChart from "./ResilientCandleChart";
 import CompanyResearchPanel from "./CompanyResearchPanel";
+import GuideResearchPanel from "./GuideResearchPanel";
 import ConfluencePanel from "./ConfluencePanel";
 import StockNews from "./StockNews";
 import DecisionPanel from "./DecisionPanel";
@@ -218,6 +219,7 @@ export default function AnalysisView() {
       </div>
       <ResilientCandleChart symbol={symbol} analysis={a} />
       <CompanyResearchPanel key={a.symbol} report={a.company} price={a.price} />
+      <GuideResearchPanel report={a.guide} symbol={a.symbol} />
       <StockNews key={symbol} symbol={symbol} />
       <DecisionPanel audit={a.decision} currency={a.currency} />
       <ConfluencePanel report={a.confluence} />
