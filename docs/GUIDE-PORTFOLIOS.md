@@ -59,7 +59,7 @@ financeiros e a fonte estão visíveis.
    observada entre ativos e parte da dependência temporal.
 5. A normalização do momento dos blocos impede que volatilidade seja confundida
    com rendimento médio gratuito. Não é uma afinação para melhorar o teste.
-6. 2.500 trajetórias por composição, seed registada a partir do histórico completo e hipóteses (não da hora da cotação intradiária), horizonte 6/12/24 meses. Usa números aleatórios comuns para reduzir ruído de comparação. Mostra o erro Monte Carlo da média, sem o confundir com incerteza de previsão.
+6. 2.500 trajetórias por composição, seed registada a partir do histórico completo e hipóteses (não da hora da cotação intradiária), horizonte 6/12/24 meses. Usa números aleatórios comuns, com seed por trajetória, para reduzir ruído de comparação entre carteiras, capitais, custos e hipóteses de retorno. Mostra o erro Monte Carlo da média, sem o confundir com incerteza de previsão.
 7. Evolução buy-and-hold sem rebalanceamento; inclui entrada, saída e saldo. Não
    soma dividendos outra vez a preços já ajustados.
 

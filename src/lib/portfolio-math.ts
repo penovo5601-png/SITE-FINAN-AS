@@ -74,8 +74,8 @@ export function simulatePortfolio(holdings:Holding[],rows:number[][],options:Por
  const blockCorrection=means.map((_,a)=>Math.log(mean(rows.map((__,start)=>Math.exp(Array.from({length:P.blockMonths},(_,j)=>rows[(start+j)%rows.length][a]-means[a]).reduce((x,y)=>x+y,0)))))/P.blockMonths);
  const invested=holdings.reduce((n,h)=>n+h.amountEUR,0),entry=invested*options.feeBps/10000+count*options.feePerOrder,cash=options.capital-invested-entry;
  if(cash<-1e-7)throw new Error("Orçamento insuficiente para suportar os custos.");
- const rng=random(seed),terminal:number[]=[],fan:number[][]=Array.from({length:months+1},()=>[]);
- for(let p=0;p<paths;p++){const values=holdings.map(h=>h.amountEUR);fan[0].push(options.capital);let index=0;
+ const terminal:number[]=[],fan:number[][]=Array.from({length:months+1},()=>[]);
+ for(let p=0;p<paths;p++){const rng=random(seed+Math.imul(p+1,0x9e3779b9));const values=holdings.map(h=>h.amountEUR);fan[0].push(options.capital);let index=0;
   for(let t=0;t<months;t++){if(t%P.blockMonths===0)index=Math.floor(rng()*rows.length);else index=(index+1)%rows.length;for(let a=0;a<count;a++)values[a]*=Math.exp(rows[index][a]-means[a]+drift[a]/12-blockCorrection[a]);fan[t+1].push(t===months-1?endingValue(values,cash,options):values.reduce((a,b)=>a+b,0)+cash);}
   terminal.push(endingValue(values,cash,options));
  }

@@ -63,7 +63,7 @@ export async function buildPortfolioReport(input:Record<string,unknown>):Promise
  const options=validPortfolioOptions(input),key=JSON.stringify(options),hit=reportCache.get(key);if(hit&&Date.now()-hit.at<5*60000)return hit.report;
  const data=await loadUniverse(),candidates=data.candidates.filter(c=>options.region!=="eur"||c.currency==="EUR");
  const fingerprint=createHash("sha256").update(JSON.stringify({version:P.version,options,data:candidates.map(c=>({symbol:c.symbol,price:c.priceEUR,at:c.quoteDate,monthly:c.monthlyEUR,quality:c.quality}))})).digest("hex");
- const simulationHash=createHash("sha256").update(JSON.stringify({version:P.version,options,monthly:candidates.map(c=>({symbol:c.symbol,monthly:c.monthlyEUR}))})).digest("hex");
+ const simulationHash=createHash("sha256").update(JSON.stringify({version:P.version,monthly:candidates.map(c=>({symbol:c.symbol,monthly:c.monthlyEUR}))})).digest("hex");
  const pairedSeed=parseInt(simulationHash.slice(0,8),16);
  const portfolios=PROFILES.flatMap(p=>{const r=composePortfolio(candidates,options,p,pairedSeed);return r?[r]:[]});
  const quotes=candidates.map(c=>c.quoteDate).sort();
